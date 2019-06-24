@@ -3,16 +3,16 @@ extern crate quicksilver;
 
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
-    graphics::{Background::Img, Color, Image},
+    graphics::Color,
     input::{ButtonState, Key},
-    lifecycle::{run, Asset, Event, Settings, State, Window},
+    lifecycle::{run, Event, Settings, State, Window},
     Result,
 };
 
 const FIELD_WIDTH: usize = 10;
 const FIELD_HEIGHT: usize = 22;
 
-const BLOCK_SIZE: f32 = 20.0;
+const BLOCK_SIZE_RATIO: f32 = 0.04;
 
 #[derive(Copy, Clone)]
 enum FieldBlock {
@@ -23,6 +23,7 @@ enum FieldBlock {
 type Field = [[FieldBlock; FIELD_HEIGHT]; FIELD_WIDTH];
 
 struct Screen {
+    screen_size: Option<Vector>,
     is_first_loop: bool,
     field: Field,
 }
@@ -30,6 +31,7 @@ struct Screen {
 impl State for Screen {
     fn new() -> Result<Screen> {
         Ok(Screen {
+            screen_size: None,
             is_first_loop: true,
             field: [[FieldBlock::Empty; FIELD_HEIGHT]; FIELD_WIDTH],
         })
@@ -37,17 +39,28 @@ impl State for Screen {
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
+
+        let screen_size = self.screen_size.expect("drawing before first update");
+        let full_height = screen_size.y;
+        let block_size = BLOCK_SIZE_RATIO * full_height;
+
+        let field_transform = Transform::translate((
+            screen_size.x * 0.5 - (0.5 * block_size * FIELD_WIDTH as f32),
+            screen_size.y * 0.5 - (0.5 * block_size * FIELD_HEIGHT as f32),
+        ));
         for y in 0..FIELD_HEIGHT {
             for x in 0..FIELD_WIDTH {
-                window.draw(
+                window.draw_ex(
                     &Rectangle::new(
-                        (BLOCK_SIZE * x as f32, BLOCK_SIZE * y as f32),
-                        (BLOCK_SIZE, BLOCK_SIZE),
+                        (block_size * x as f32, block_size * y as f32),
+                        (block_size, block_size),
                     ),
                     match self.field[x][y] {
                         FieldBlock::Empty => Color::BLUE,
                         FieldBlock::Occupied => Color::RED,
                     },
+                    field_transform,
+                    0,
                 );
             }
         }
@@ -58,13 +71,15 @@ impl State for Screen {
         if self.is_first_loop {
             self.is_first_loop = false;
             println!(
-                "Focused! update rate: {} draw rate: {} max updates: {}",
+                "update rate: {} draw rate: {} max updates: {} resize: {:?}",
                 window.update_rate(),
                 window.draw_rate(),
                 window.max_updates(),
+                window.resize_strategy()
             );
 
             self.field[3][4] = FieldBlock::Occupied;
+            self.screen_size = Some(window.screen_size());
         }
         Ok(())
     }
