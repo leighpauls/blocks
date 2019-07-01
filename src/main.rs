@@ -10,6 +10,7 @@ use quicksilver::{
 };
 
 use std::ops::Add;
+use std::time::{Duration, Instant};
 
 type Coord = i32;
 
@@ -118,6 +119,16 @@ impl ControlledBlocks {
         }
         self.root_pos = self.root_pos + dir;
     }
+
+    fn soft_drop(&mut self, field: &Field) {
+        let delta = Pos::new(0, 1);
+        for pos in self.relative_poses.iter() {
+            if !field.is_open(self.root_pos + *pos + delta) {
+                return;
+            }
+        }
+        self.root_pos = self.root_pos + delta;
+    }
 }
 
 struct Screen {
@@ -125,6 +136,7 @@ struct Screen {
     is_first_loop: bool,
     field: Field,
     controlled_blocks: ControlledBlocks,
+    next_drop: Instant,
 }
 
 impl State for Screen {
@@ -142,6 +154,7 @@ impl State for Screen {
                     Pos::new(3, 0),
                 ],
             },
+            next_drop: Instant::now(),
         })
     }
 
@@ -196,7 +209,14 @@ impl State for Screen {
 
             self.field.set(Pos::new(3, 4), FieldBlock::Occupied);
             self.screen_size_option = Some(window.screen_size());
+            self.next_drop = Instant::now() + Duration::from_millis(1000);
         }
+
+        if self.next_drop <= Instant::now() {
+            self.controlled_blocks.soft_drop(&self.field);
+            self.next_drop += Duration::from_millis(1000);
+        }
+
         Ok(())
     }
 
