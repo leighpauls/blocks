@@ -40,7 +40,7 @@ impl Add<Pos> for Pos {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum FieldBlock {
     Empty,
     Occupied,
@@ -64,11 +64,39 @@ impl Field {
     fn set(&mut self, pos: Pos, value: FieldBlock) {
         self.blocks[pos.x as usize][pos.y as usize] = value;
     }
+
+    fn is_open(&self, pos: Pos) -> bool {
+        pos.x >= 0
+            && pos.x < FIELD_WIDTH
+            && pos.y >= 0
+            && pos.y < FIELD_HEIGHT
+            && self.at(pos) == FieldBlock::Empty
+    }
 }
 
 struct ControlledBlocks {
     root_pos: Pos,
     relative_poses: [Pos; 4],
+}
+
+#[derive(Copy, Clone)]
+enum ShiftDir {
+    Left,
+    Right,
+}
+
+impl Add<ShiftDir> for Pos {
+    type Output = Pos;
+    fn add(self, other: ShiftDir) -> Pos {
+        Pos::new(
+            self.x
+                + match other {
+                    ShiftDir::Left => -1,
+                    ShiftDir::Right => 1,
+                },
+            self.y,
+        )
+    }
 }
 
 impl ControlledBlocks {
@@ -81,11 +109,15 @@ impl ControlledBlocks {
         return false;
     }
 
-    // fn maybe_translate(&mut self, field: &Field, x: Coord, y: Coord) {
-    //     for pos in self.relative_positions.iter() {
-    //         let new_position = (pos.x + x, post.y + y)
-    //     }
-    // }
+    fn shift(&mut self, field: &Field, dir: ShiftDir) {
+        // Don't move if it's not legal
+        for pos in self.relative_poses.iter() {
+            if !field.is_open(self.root_pos + *pos + dir) {
+                return;
+            }
+        }
+        self.root_pos = self.root_pos + dir;
+    }
 }
 
 struct Screen {
@@ -169,16 +201,14 @@ impl State for Screen {
     }
 
     fn event(&mut self, event: &Event, _window: &mut Window) -> Result<()> {
-        if let Event::Key(key, ButtonState::Pressed) = event {
-            let pos = Pos::new(5, 6);
-            self.field.set(
-                pos,
-                match key {
-                    Key::Left => FieldBlock::Occupied,
-                    Key::Right => FieldBlock::Empty,
-                    _ => self.field.at(pos),
-                },
-            );
+        match event {
+            Event::Key(Key::Left, ButtonState::Pressed) => {
+                self.controlled_blocks.shift(&self.field, ShiftDir::Left)
+            }
+            Event::Key(Key::Right, ButtonState::Pressed) => {
+                self.controlled_blocks.shift(&self.field, ShiftDir::Right)
+            }
+            _ => (),
         }
         Ok(())
     }
