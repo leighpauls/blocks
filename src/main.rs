@@ -9,10 +9,36 @@ use quicksilver::{
     Result,
 };
 
-const FIELD_WIDTH: usize = 10;
-const FIELD_HEIGHT: usize = 22;
+use std::ops::Add;
+
+type Coord = i32;
+
+const FIELD_WIDTH: Coord = 10;
+const FIELD_HEIGHT: Coord = 22;
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
+
+#[derive(Copy, Clone, PartialEq)]
+struct Pos {
+    x: Coord,
+    y: Coord,
+}
+
+impl Pos {
+    fn new<T: Into<Coord>>(x: T, y: T) -> Pos {
+        Pos {
+            x: x.into(),
+            y: y.into(),
+        }
+    }
+}
+
+impl Add<Pos> for Pos {
+    type Output = Pos;
+    fn add(self, other: Pos) -> Pos {
+        Pos::new(self.x + other.x, self.y + other.y)
+    }
+}
 
 #[derive(Copy, Clone)]
 enum FieldBlock {
@@ -20,27 +46,79 @@ enum FieldBlock {
     Occupied,
 }
 
-type Field = [[FieldBlock; FIELD_HEIGHT]; FIELD_WIDTH];
+struct Field {
+    blocks: [[FieldBlock; FIELD_HEIGHT as usize]; FIELD_WIDTH as usize],
+}
+
+impl Field {
+    fn new() -> Field {
+        Field {
+            blocks: [[FieldBlock::Empty; FIELD_HEIGHT as usize]; FIELD_WIDTH as usize],
+        }
+    }
+
+    fn at(&self, pos: Pos) -> FieldBlock {
+        self.blocks[pos.x as usize][pos.y as usize]
+    }
+
+    fn set(&mut self, pos: Pos, value: FieldBlock) {
+        self.blocks[pos.x as usize][pos.y as usize] = value;
+    }
+}
+
+struct ControlledBlocks {
+    root_pos: Pos,
+    relative_poses: [Pos; 4],
+}
+
+impl ControlledBlocks {
+    fn is_controlled(&self, target: Pos) -> bool {
+        for relative in self.relative_poses.iter() {
+            if self.root_pos + *relative == target {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // fn maybe_translate(&mut self, field: &Field, x: Coord, y: Coord) {
+    //     for pos in self.relative_positions.iter() {
+    //         let new_position = (pos.x + x, post.y + y)
+    //     }
+    // }
+}
 
 struct Screen {
-    screen_size: Option<Vector>,
+    screen_size_option: Option<Vector>,
     is_first_loop: bool,
     field: Field,
+    controlled_blocks: ControlledBlocks,
 }
 
 impl State for Screen {
     fn new() -> Result<Screen> {
         Ok(Screen {
-            screen_size: None,
+            screen_size_option: None,
             is_first_loop: true,
-            field: [[FieldBlock::Empty; FIELD_HEIGHT]; FIELD_WIDTH],
+            field: Field::new(),
+            controlled_blocks: ControlledBlocks {
+                root_pos: Pos::new(5, 10),
+                relative_poses: [
+                    Pos::new(0, 0),
+                    Pos::new(1, 0),
+                    Pos::new(2, 0),
+                    Pos::new(3, 0),
+                ],
+            },
         })
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
 
-        let screen_size = self.screen_size.expect("drawing before first update");
+        let screen_size = self
+            .screen_size_option
+            .expect("drawing before first update");
         let full_height = screen_size.y;
         let block_size = BLOCK_SIZE_RATIO * full_height;
 
@@ -55,8 +133,14 @@ impl State for Screen {
                         (block_size * x as f32, block_size * y as f32),
                         (block_size, block_size),
                     ),
-                    match self.field[x][y] {
-                        FieldBlock::Empty => Color::BLUE,
+                    match self.field.at(Pos::new(x, y)) {
+                        FieldBlock::Empty => {
+                            if self.controlled_blocks.is_controlled(Pos::new(x, y)) {
+                                Color::GREEN
+                            } else {
+                                Color::BLUE
+                            }
+                        }
                         FieldBlock::Occupied => Color::RED,
                     },
                     field_transform,
@@ -78,20 +162,23 @@ impl State for Screen {
                 window.resize_strategy()
             );
 
-            self.field[3][4] = FieldBlock::Occupied;
-            self.screen_size = Some(window.screen_size());
+            self.field.set(Pos::new(3, 4), FieldBlock::Occupied);
+            self.screen_size_option = Some(window.screen_size());
         }
         Ok(())
     }
 
     fn event(&mut self, event: &Event, _window: &mut Window) -> Result<()> {
         if let Event::Key(key, ButtonState::Pressed) = event {
-            let target = &mut self.field[5][6];
-            *target = match key {
-                Key::Left => FieldBlock::Occupied,
-                Key::Right => FieldBlock::Empty,
-                _ => *target,
-            };
+            let pos = Pos::new(5, 6);
+            self.field.set(
+                pos,
+                match key {
+                    Key::Left => FieldBlock::Occupied,
+                    Key::Right => FieldBlock::Empty,
+                    _ => self.field.at(pos),
+                },
+            );
         }
         Ok(())
     }
