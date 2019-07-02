@@ -1,6 +1,8 @@
 // Draw some multi-colored geometry to the screen
 extern crate quicksilver;
 
+mod position;
+
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::Color,
@@ -9,37 +11,14 @@ use quicksilver::{
     Result,
 };
 
-use std::ops::Add;
 use std::time::{Duration, Instant};
 
-type Coord = i32;
+use position::{Coord, Pos, ShiftDir};
 
 const FIELD_WIDTH: Coord = 10;
 const FIELD_HEIGHT: Coord = 22;
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
-
-#[derive(Copy, Clone, PartialEq)]
-struct Pos {
-    x: Coord,
-    y: Coord,
-}
-
-impl Pos {
-    fn new<T: Into<Coord>>(x: T, y: T) -> Pos {
-        Pos {
-            x: x.into(),
-            y: y.into(),
-        }
-    }
-}
-
-impl Add<Pos> for Pos {
-    type Output = Pos;
-    fn add(self, other: Pos) -> Pos {
-        Pos::new(self.x + other.x, self.y + other.y)
-    }
-}
 
 #[derive(Copy, Clone, PartialEq)]
 enum FieldBlock {
@@ -81,27 +60,7 @@ struct ControlledBlocks {
     next_drop_option: Option<Instant>,
 }
 
-#[derive(Copy, Clone)]
-enum ShiftDir {
-    Left,
-    Right,
-}
-
-impl Add<ShiftDir> for Pos {
-    type Output = Pos;
-    fn add(self, other: ShiftDir) -> Pos {
-        Pos::new(
-            self.x
-                + match other {
-                    ShiftDir::Left => -1,
-                    ShiftDir::Right => 1,
-                },
-            self.y,
-        )
-    }
-}
-
-const DROP_PERIOD : Duration = Duration::from_millis(1000);
+const DROP_PERIOD: Duration = Duration::from_millis(1000);
 
 impl ControlledBlocks {
     fn new() -> ControlledBlocks {
@@ -152,7 +111,7 @@ impl ControlledBlocks {
         self.soft_drop(field);
         *self.next_drop() = Instant::now() + DROP_PERIOD;
     }
-    
+
     fn soft_drop(&mut self, field: &Field) {
         let delta = Pos::new(0, 1);
         for pos in self.relative_poses.iter() {
