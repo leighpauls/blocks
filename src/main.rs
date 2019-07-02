@@ -1,6 +1,7 @@
 // Draw some multi-colored geometry to the screen
 extern crate quicksilver;
 
+mod field;
 mod position;
 
 use quicksilver::{
@@ -13,46 +14,10 @@ use quicksilver::{
 
 use std::time::{Duration, Instant};
 
-use position::{Coord, Pos, ShiftDir};
-
-const FIELD_WIDTH: Coord = 10;
-const FIELD_HEIGHT: Coord = 22;
+use field::{Field, FieldBlock};
+use position::{Pos, ShiftDir};
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
-
-#[derive(Copy, Clone, PartialEq)]
-enum FieldBlock {
-    Empty,
-    Occupied,
-}
-
-struct Field {
-    blocks: [[FieldBlock; FIELD_HEIGHT as usize]; FIELD_WIDTH as usize],
-}
-
-impl Field {
-    fn new() -> Field {
-        Field {
-            blocks: [[FieldBlock::Empty; FIELD_HEIGHT as usize]; FIELD_WIDTH as usize],
-        }
-    }
-
-    fn at(&self, pos: Pos) -> FieldBlock {
-        self.blocks[pos.x as usize][pos.y as usize]
-    }
-
-    fn set(&mut self, pos: Pos, value: FieldBlock) {
-        self.blocks[pos.x as usize][pos.y as usize] = value;
-    }
-
-    fn is_open(&self, pos: Pos) -> bool {
-        pos.x >= 0
-            && pos.x < FIELD_WIDTH
-            && pos.y >= 0
-            && pos.y < FIELD_HEIGHT
-            && self.at(pos) == FieldBlock::Empty
-    }
-}
 
 struct ControlledBlocks {
     root_pos: Pos,
@@ -156,11 +121,11 @@ impl State for Screen {
         let block_size = BLOCK_SIZE_RATIO * full_height;
 
         let field_transform = Transform::translate((
-            screen_size.x * 0.5 - (0.5 * block_size * FIELD_WIDTH as f32),
-            screen_size.y * 0.5 - (0.5 * block_size * FIELD_HEIGHT as f32),
+            screen_size.x * 0.5 - (0.5 * block_size * field::WIDTH as f32),
+            screen_size.y * 0.5 - (0.5 * block_size * field::HEIGHT as f32),
         ));
-        for y in 0..FIELD_HEIGHT {
-            for x in 0..FIELD_WIDTH {
+        for y in 0..field::HEIGHT {
+            for x in 0..field::WIDTH {
                 window.draw_ex(
                     &Rectangle::new(
                         (block_size * x as f32, block_size * y as f32),
