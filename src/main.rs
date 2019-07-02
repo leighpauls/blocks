@@ -78,6 +78,7 @@ impl Field {
 struct ControlledBlocks {
     root_pos: Pos,
     relative_poses: [Pos; 4],
+    next_drop_option: Option<Instant>,
 }
 
 #[derive(Copy, Clone)]
@@ -100,7 +101,26 @@ impl Add<ShiftDir> for Pos {
     }
 }
 
+const DROP_PERIOD : Duration = Duration::from_millis(1000);
+
 impl ControlledBlocks {
+    fn new() -> ControlledBlocks {
+        ControlledBlocks {
+            root_pos: Pos::new(5, 10),
+            relative_poses: [
+                Pos::new(0, 0),
+                Pos::new(1, 0),
+                Pos::new(2, 0),
+                Pos::new(3, 0),
+            ],
+            next_drop_option: None,
+        }
+    }
+
+    fn start(&mut self) {
+        self.next_drop_option = Some(Instant::now() + DROP_PERIOD);
+    }
+
     fn is_controlled(&self, target: Pos) -> bool {
         for relative in self.relative_poses.iter() {
             if self.root_pos + *relative == target {
@@ -120,6 +140,19 @@ impl ControlledBlocks {
         self.root_pos = self.root_pos + dir;
     }
 
+    fn maybe_periodic_drop(&mut self, field: &Field) {
+        if *self.next_drop() > Instant::now() {
+            return;
+        }
+        self.soft_drop(field);
+        *self.next_drop() += DROP_PERIOD;
+    }
+
+    fn manual_soft_drop(&mut self, field: &Field) {
+        self.soft_drop(field);
+        *self.next_drop() = Instant::now() + DROP_PERIOD;
+    }
+    
     fn soft_drop(&mut self, field: &Field) {
         let delta = Pos::new(0, 1);
         for pos in self.relative_poses.iter() {
@@ -129,6 +162,12 @@ impl ControlledBlocks {
         }
         self.root_pos = self.root_pos + delta;
     }
+
+    fn next_drop(&mut self) -> &mut Instant {
+        self.next_drop_option
+            .as_mut()
+            .expect("Using ControlledBlocks before calling start()")
+    }
 }
 
 struct Screen {
@@ -136,7 +175,6 @@ struct Screen {
     is_first_loop: bool,
     field: Field,
     controlled_blocks: ControlledBlocks,
-    next_drop: Instant,
 }
 
 impl State for Screen {
@@ -145,16 +183,7 @@ impl State for Screen {
             screen_size_option: None,
             is_first_loop: true,
             field: Field::new(),
-            controlled_blocks: ControlledBlocks {
-                root_pos: Pos::new(5, 10),
-                relative_poses: [
-                    Pos::new(0, 0),
-                    Pos::new(1, 0),
-                    Pos::new(2, 0),
-                    Pos::new(3, 0),
-                ],
-            },
-            next_drop: Instant::now(),
+            controlled_blocks: ControlledBlocks::new(),
         })
     }
 
@@ -209,13 +238,10 @@ impl State for Screen {
 
             self.field.set(Pos::new(3, 4), FieldBlock::Occupied);
             self.screen_size_option = Some(window.screen_size());
-            self.next_drop = Instant::now() + Duration::from_millis(1000);
+            self.controlled_blocks.start();
         }
 
-        if self.next_drop <= Instant::now() {
-            self.controlled_blocks.soft_drop(&self.field);
-            self.next_drop += Duration::from_millis(1000);
-        }
+        self.controlled_blocks.maybe_periodic_drop(&self.field);
 
         Ok(())
     }
@@ -227,6 +253,9 @@ impl State for Screen {
             }
             Event::Key(Key::Right, ButtonState::Pressed) => {
                 self.controlled_blocks.shift(&self.field, ShiftDir::Right)
+            }
+            Event::Key(Key::Down, ButtonState::Pressed) => {
+                self.controlled_blocks.manual_soft_drop(&self.field)
             }
             _ => (),
         }
