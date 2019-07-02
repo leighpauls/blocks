@@ -5,7 +5,7 @@ mod controlled;
 mod field;
 mod position;
 
-use controlled::ControlledBlocks;
+use controlled::{ControlledBlocks, DropResult};
 use field::{Field, FieldBlock};
 use position::{Pos, ShiftDir};
 use quicksilver::{
@@ -18,16 +18,32 @@ use quicksilver::{
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
-struct Screen {
+struct Game {
     screen_size_option: Option<Vector>,
     is_first_loop: bool,
     field: Field,
     controlled_blocks: ControlledBlocks,
 }
 
-impl State for Screen {
-    fn new() -> Result<Screen> {
-        Ok(Screen {
+impl Game {
+    fn handle_drop(&mut self, drop_result: DropResult) {
+        if let DropResult::Continue = drop_result {
+            // These blocks are still dropping
+            return;
+        }
+        for pos in self.controlled_blocks.positions().iter() {
+            self.field.set(*pos, FieldBlock::Occupied);
+        }
+
+        // Replace the stopped blocks with new ones
+        self.controlled_blocks = ControlledBlocks::new();
+        self.controlled_blocks.start();
+    }
+}
+
+impl State for Game {
+    fn new() -> Result<Game> {
+        Ok(Game {
             screen_size_option: None,
             is_first_loop: true,
             field: Field::new(),
@@ -89,7 +105,8 @@ impl State for Screen {
             self.controlled_blocks.start();
         }
 
-        self.controlled_blocks.maybe_periodic_drop(&self.field);
+        let drop_result = self.controlled_blocks.maybe_periodic_drop(&self.field);
+        self.handle_drop(drop_result);
 
         Ok(())
     }
@@ -103,7 +120,8 @@ impl State for Screen {
                 self.controlled_blocks.shift(&self.field, ShiftDir::Right)
             }
             Event::Key(Key::Down, ButtonState::Pressed) => {
-                self.controlled_blocks.manual_soft_drop(&self.field)
+                let drop_result = self.controlled_blocks.manual_soft_drop(&self.field);
+                self.handle_drop(drop_result)
             }
             _ => (),
         }
@@ -112,7 +130,7 @@ impl State for Screen {
 }
 
 fn main() {
-    run::<Screen>(
+    run::<Game>(
         "Draw Geometry",
         Vector::new(800, 600),
         Settings {

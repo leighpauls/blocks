@@ -1,5 +1,5 @@
-use crate::position::{Pos, ShiftDir};
 use crate::field::Field;
+use crate::position::{Pos, ShiftDir};
 use std::time::{Duration, Instant};
 
 pub struct ControlledBlocks {
@@ -9,6 +9,11 @@ pub struct ControlledBlocks {
 }
 
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
+
+pub enum DropResult {
+    Continue,
+    Stop,
+}
 
 impl ControlledBlocks {
     pub fn new() -> ControlledBlocks {
@@ -26,6 +31,14 @@ impl ControlledBlocks {
 
     pub fn start(&mut self) {
         self.next_drop_option = Some(Instant::now() + DROP_PERIOD);
+    }
+
+    pub fn positions(&self) -> [Pos; 4] {
+        let mut result = self.relative_poses;
+        for pos in result.iter_mut() {
+            *pos = *pos + self.root_pos;
+        }
+        result
     }
 
     pub fn is_controlled(&self, target: Pos) -> bool {
@@ -47,27 +60,28 @@ impl ControlledBlocks {
         self.root_pos = self.root_pos + dir;
     }
 
-    pub fn maybe_periodic_drop(&mut self, field: &Field) {
+    pub fn maybe_periodic_drop(&mut self, field: &Field) -> DropResult {
         if *self.next_drop() > Instant::now() {
-            return;
+            return DropResult::Continue;
         }
-        self.soft_drop(field);
         *self.next_drop() += DROP_PERIOD;
+        self.soft_drop(field)
     }
 
-    pub fn manual_soft_drop(&mut self, field: &Field) {
-        self.soft_drop(field);
+    pub fn manual_soft_drop(&mut self, field: &Field) -> DropResult {
         *self.next_drop() = Instant::now() + DROP_PERIOD;
+        self.soft_drop(field)
     }
 
-    fn soft_drop(&mut self, field: &Field) {
+    fn soft_drop(&mut self, field: &Field) -> DropResult {
         let delta = Pos::new(0, 1);
         for pos in self.relative_poses.iter() {
             if !field.is_open(self.root_pos + *pos + delta) {
-                return;
+                return DropResult::Stop;
             }
         }
         self.root_pos = self.root_pos + delta;
+        DropResult::Continue
     }
 
     fn next_drop(&mut self) -> &mut Instant {
