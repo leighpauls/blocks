@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 pub struct ControlledBlocks {
     root_pos: Pos,
     relative_poses: [Pos; 4],
-    next_drop_option: Option<Instant>,
+    next_drop_time: Instant,
 }
 
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
@@ -25,12 +25,8 @@ impl ControlledBlocks {
                 Pos::new(2, 0),
                 Pos::new(3, 0),
             ],
-            next_drop_option: None,
+            next_drop_time: Instant::now() + DROP_PERIOD,
         }
-    }
-
-    pub fn start(&mut self) {
-        self.next_drop_option = Some(Instant::now() + DROP_PERIOD);
     }
 
     pub fn positions(&self) -> [Pos; 4] {
@@ -61,15 +57,15 @@ impl ControlledBlocks {
     }
 
     pub fn maybe_periodic_drop(&mut self, field: &Field) -> DropResult {
-        if *self.next_drop() > Instant::now() {
+        if self.next_drop_time > Instant::now() {
             return DropResult::Continue;
         }
-        *self.next_drop() += DROP_PERIOD;
+        self.next_drop_time += DROP_PERIOD;
         self.soft_drop(field)
     }
 
     pub fn manual_soft_drop(&mut self, field: &Field) -> DropResult {
-        *self.next_drop() = Instant::now() + DROP_PERIOD;
+        self.next_drop_time = Instant::now() + DROP_PERIOD;
         self.soft_drop(field)
     }
 
@@ -83,12 +79,6 @@ impl ControlledBlocks {
         self.root_pos = self.root_pos + delta;
         DropResult::Continue
     }
-
-    fn next_drop(&mut self) -> &mut Instant {
-        self.next_drop_option
-            .as_mut()
-            .expect("Using ControlledBlocks before calling start()")
-    }
 }
 
 #[cfg(test)]
@@ -97,9 +87,7 @@ mod tests {
 
     #[test]
     fn controlled() {
-        let mut b = ControlledBlocks::new();
-        b.start();
-
+        let b = ControlledBlocks::new();
         assert_eq!(true, b.is_controlled(Pos::new(0, 0)));
         assert_eq!(false, b.is_controlled(Pos::new(0, 1)));
     }

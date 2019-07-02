@@ -19,8 +19,12 @@ use quicksilver::{
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
 struct Game {
-    screen_size_option: Option<Vector>,
-    is_first_loop: bool,
+    // Initialzied on the first loop
+    game_state_option: Option<GameState>,
+}
+
+struct GameState {
+    screen_size: Vector,
     field: Field,
     controlled_blocks: ControlledBlocks,
 }
@@ -31,32 +35,32 @@ impl Game {
             // These blocks are still dropping
             return;
         }
-        for pos in self.controlled_blocks.positions().iter() {
-            self.field.set(*pos, FieldBlock::Occupied);
+        for pos in self.game_state().controlled_blocks.positions().iter() {
+            self.game_state().field.set(*pos, FieldBlock::Occupied);
         }
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new();
-        self.controlled_blocks.start();
+        self.game_state().controlled_blocks = ControlledBlocks::new();
+    }
+
+    fn game_state(&mut self) -> &mut GameState {
+        self.game_state_option
+            .as_mut()
+            .expect("Getting game state beore first loop")
     }
 }
 
 impl State for Game {
     fn new() -> Result<Game> {
         Ok(Game {
-            screen_size_option: None,
-            is_first_loop: true,
-            field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(),
+            game_state_option: None,
         })
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
 
-        let screen_size = self
-            .screen_size_option
-            .expect("drawing before first update");
+        let screen_size = self.game_state().screen_size;
         let full_height = screen_size.y;
         let block_size = BLOCK_SIZE_RATIO * full_height;
 
@@ -71,9 +75,13 @@ impl State for Game {
                         (block_size * x as f32, block_size * y as f32),
                         (block_size, block_size),
                     ),
-                    match self.field.at(Pos::new(x, y)) {
+                    match self.game_state().field.at(Pos::new(x, y)) {
                         FieldBlock::Empty => {
-                            if self.controlled_blocks.is_controlled(Pos::new(x, y)) {
+                            if self
+                                .game_state()
+                                .controlled_blocks
+                                .is_controlled(Pos::new(x, y))
+                            {
                                 Color::GREEN
                             } else {
                                 Color::BLUE
@@ -90,37 +98,36 @@ impl State for Game {
     }
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
-        if self.is_first_loop {
-            self.is_first_loop = false;
-            println!(
-                "update rate: {} draw rate: {} max updates: {} resize: {:?}",
-                window.update_rate(),
-                window.draw_rate(),
-                window.max_updates(),
-                window.resize_strategy()
-            );
-
-            self.field.set(Pos::new(3, 4), FieldBlock::Occupied);
-            self.screen_size_option = Some(window.screen_size());
-            self.controlled_blocks.start();
+        if let None = self.game_state_option {
+            self.game_state_option = Some(GameState {
+                screen_size: window.screen_size(),
+                field: Field::new(),
+                controlled_blocks: ControlledBlocks::new(),
+            });
         }
 
-        let drop_result = self.controlled_blocks.maybe_periodic_drop(&self.field);
+        let game_state = self.game_state();
+        let drop_result = game_state
+            .controlled_blocks
+            .maybe_periodic_drop(&game_state.field);
         self.handle_drop(drop_result);
 
         Ok(())
     }
 
     fn event(&mut self, event: &Event, _window: &mut Window) -> Result<()> {
+        let game_state = self.game_state();
         match event {
-            Event::Key(Key::Left, ButtonState::Pressed) => {
-                self.controlled_blocks.shift(&self.field, ShiftDir::Left)
-            }
-            Event::Key(Key::Right, ButtonState::Pressed) => {
-                self.controlled_blocks.shift(&self.field, ShiftDir::Right)
-            }
+            Event::Key(Key::Left, ButtonState::Pressed) => game_state
+                .controlled_blocks
+                .shift(&game_state.field, ShiftDir::Left),
+            Event::Key(Key::Right, ButtonState::Pressed) => game_state
+                .controlled_blocks
+                .shift(&game_state.field, ShiftDir::Right),
             Event::Key(Key::Down, ButtonState::Pressed) => {
-                let drop_result = self.controlled_blocks.manual_soft_drop(&self.field);
+                let drop_result = game_state
+                    .controlled_blocks
+                    .manual_soft_drop(&game_state.field);
                 self.handle_drop(drop_result)
             }
             _ => (),
