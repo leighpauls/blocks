@@ -118,7 +118,7 @@ impl State for Game {
         Ok(())
     }
 
-    fn event(&mut self, event: &Event, _window: &mut Window) -> Result<()> {
+    fn event(&mut self, event: &Event, window: &mut Window) -> Result<()> {
         let game_state = self.game_state();
         match event {
             Event::Key(Key::Left, ButtonState::Pressed) => game_state
@@ -133,6 +133,7 @@ impl State for Game {
                     .manual_soft_drop(&game_state.field);
                 self.handle_drop(drop_result)
             }
+            Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),
             _ => (),
         }
         Ok(())
