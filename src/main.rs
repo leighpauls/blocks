@@ -18,6 +18,7 @@ use quicksilver::{
     lifecycle::{run, Event, Settings, State, Window},
     Result,
 };
+use std::time::{Instant, Duration};
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
@@ -30,6 +31,7 @@ struct GameState {
     screen_size: Vector,
     field: Field,
     controlled_blocks: ControlledBlocks,
+    game_start_time: Instant,
 }
 
 impl Game {
@@ -43,13 +45,19 @@ impl Game {
         }
 
         // Replace the stopped blocks with new ones
-        self.game_state().controlled_blocks = ControlledBlocks::new();
+        self.game_state().controlled_blocks = ControlledBlocks::new(self.game_state().game_time());
     }
 
     fn game_state(&mut self) -> &mut GameState {
         self.game_state_option
             .as_mut()
             .expect("Getting game state beore first loop")
+    }
+}
+
+impl GameState {
+    fn game_time(&self) -> Duration {
+        Instant::now() - self.game_start_time
     }
 }
 
@@ -102,17 +110,19 @@ impl State for Game {
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
         if let None = self.game_state_option {
+            let start_time = Instant::now();
             self.game_state_option = Some(GameState {
                 screen_size: window.screen_size(),
                 field: Field::new(),
-                controlled_blocks: ControlledBlocks::new(),
+                controlled_blocks: ControlledBlocks::new(Instant::now() - start_time),
+                game_start_time: start_time,
             });
         }
 
         let game_state = self.game_state();
         let drop_result = game_state
             .controlled_blocks
-            .maybe_periodic_drop(&game_state.field);
+            .maybe_periodic_drop(&game_state.field, game_state.game_time());
         self.handle_drop(drop_result);
 
         Ok(())
@@ -130,7 +140,7 @@ impl State for Game {
             Event::Key(Key::Down, ButtonState::Pressed) => {
                 let drop_result = game_state
                     .controlled_blocks
-                    .manual_soft_drop(&game_state.field);
+                    .manual_soft_drop(&game_state.field, game_state.game_time());
                 self.handle_drop(drop_result)
             }
             Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),

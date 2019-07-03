@@ -1,5 +1,5 @@
 use crate::position::{Pos, ShiftDir};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub trait CheckField {
     fn is_open(&self, pos: Pos) -> bool;
@@ -8,7 +8,7 @@ pub trait CheckField {
 pub struct ControlledBlocks {
     root_pos: Pos,
     relative_poses: [Pos; 4],
-    next_drop_time: Instant,
+    next_drop_time: Duration,
 }
 
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
@@ -19,7 +19,7 @@ pub enum DropResult {
 }
 
 impl ControlledBlocks {
-    pub fn new() -> ControlledBlocks {
+    pub fn new(start_time: Duration) -> ControlledBlocks {
         ControlledBlocks {
             root_pos: Pos::new(0, 0),
             relative_poses: [
@@ -28,7 +28,7 @@ impl ControlledBlocks {
                 Pos::new(2, 0),
                 Pos::new(3, 0),
             ],
-            next_drop_time: Instant::now() + DROP_PERIOD,
+            next_drop_time: start_time + DROP_PERIOD,
         }
     }
 
@@ -59,16 +59,16 @@ impl ControlledBlocks {
         self.root_pos = self.root_pos + dir;
     }
 
-    pub fn maybe_periodic_drop(&mut self, field: &CheckField) -> DropResult {
-        if self.next_drop_time > Instant::now() {
+    pub fn maybe_periodic_drop(&mut self, field: &CheckField, now: Duration) -> DropResult {
+        if self.next_drop_time > now {
             return DropResult::Continue;
         }
         self.next_drop_time += DROP_PERIOD;
         self.soft_drop(field)
     }
 
-    pub fn manual_soft_drop(&mut self, field: &CheckField) -> DropResult {
-        self.next_drop_time = Instant::now() + DROP_PERIOD;
+    pub fn manual_soft_drop(&mut self, field: &CheckField, now: Duration) -> DropResult {
+        self.next_drop_time = now + DROP_PERIOD;
         self.soft_drop(field)
     }
 
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn controlled() {
-        let b = ControlledBlocks::new();
+        let b = ControlledBlocks::new(Duration::from_millis(0));
         assert_eq!(true, b.is_controlled(Pos::new(0, 0)));
         assert_eq!(false, b.is_controlled(Pos::new(0, 1)));
     }
@@ -105,13 +105,27 @@ mod tests {
         let mock_field = MockCheckField::default();
         mock_field.is_open.return_value_for(Pos::new(5, 0), false);
         mock_field.is_open.return_value(true);
-        
-        let mut b = ControlledBlocks::new();
+
+        let mut b = ControlledBlocks::new(Duration::from_millis(0));
         b.shift(&mock_field, ShiftDir::Right);
         b.shift(&mock_field, ShiftDir::Right);
 
         // Asset I shifted only once
         assert_eq!(false, b.is_controlled(Pos::new(0, 0)));
         assert_eq!(true, b.is_controlled(Pos::new(1, 0)));
+    }
+
+    #[test]
+    fn periodic_drop() {
+        let mock_field = MockCheckField::default();
+        mock_field.is_open.return_value(true);
+
+        let mut b = ControlledBlocks::new(Duration::from_millis(0));
+
+        b.maybe_periodic_drop(&mock_field, Duration::from_millis(10));
+        assert_eq!(true, b.is_controlled(Pos::new(0, 0)));
+
+        b.maybe_periodic_drop(&mock_field, Duration::from_millis(1010));
+        assert_eq!(false, b.is_controlled(Pos::new(0, 0)));
     }
 }
