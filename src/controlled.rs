@@ -1,6 +1,9 @@
-use crate::field::Field;
 use crate::position::{Pos, ShiftDir};
 use std::time::{Duration, Instant};
+
+pub trait CheckField {
+    fn is_open(&self, pos: Pos) -> bool;
+}
 
 pub struct ControlledBlocks {
     root_pos: Pos,
@@ -46,7 +49,7 @@ impl ControlledBlocks {
         return false;
     }
 
-    pub fn shift(&mut self, field: &Field, dir: ShiftDir) {
+    pub fn shift(&mut self, field: &CheckField, dir: ShiftDir) {
         // Don't move if it's not legal
         for pos in self.relative_poses.iter() {
             if !field.is_open(self.root_pos + *pos + dir) {
@@ -56,7 +59,7 @@ impl ControlledBlocks {
         self.root_pos = self.root_pos + dir;
     }
 
-    pub fn maybe_periodic_drop(&mut self, field: &Field) -> DropResult {
+    pub fn maybe_periodic_drop(&mut self, field: &CheckField) -> DropResult {
         if self.next_drop_time > Instant::now() {
             return DropResult::Continue;
         }
@@ -64,12 +67,12 @@ impl ControlledBlocks {
         self.soft_drop(field)
     }
 
-    pub fn manual_soft_drop(&mut self, field: &Field) -> DropResult {
+    pub fn manual_soft_drop(&mut self, field: &CheckField) -> DropResult {
         self.next_drop_time = Instant::now() + DROP_PERIOD;
         self.soft_drop(field)
     }
 
-    fn soft_drop(&mut self, field: &Field) -> DropResult {
+    fn soft_drop(&mut self, field: &CheckField) -> DropResult {
         let delta = Pos::new(0, 1);
         for pos in self.relative_poses.iter() {
             if !field.is_open(self.root_pos + *pos + delta) {
@@ -85,10 +88,30 @@ impl ControlledBlocks {
 mod tests {
     use super::*;
 
+    mock_trait!(MockCheckField, is_open(Pos) -> bool);
+    impl CheckField for MockCheckField {
+        mock_method!(is_open(&self, pos: Pos) -> bool);
+    }
+
     #[test]
     fn controlled() {
         let b = ControlledBlocks::new();
         assert_eq!(true, b.is_controlled(Pos::new(0, 0)));
         assert_eq!(false, b.is_controlled(Pos::new(0, 1)));
+    }
+
+    #[test]
+    fn shift() {
+        let mock_field = MockCheckField::default();
+        mock_field.is_open.return_value_for(Pos::new(5, 0), false);
+        mock_field.is_open.return_value(true);
+        
+        let mut b = ControlledBlocks::new();
+        b.shift(&mock_field, ShiftDir::Right);
+        b.shift(&mock_field, ShiftDir::Right);
+
+        // Asset I shifted only once
+        assert_eq!(false, b.is_controlled(Pos::new(0, 0)));
+        assert_eq!(true, b.is_controlled(Pos::new(1, 0)));
     }
 }

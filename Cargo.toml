@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 quicksilver = "*"
+
+[dev-dependencies]
+double = "0.2.3"

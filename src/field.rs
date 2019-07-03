@@ -1,3 +1,4 @@
+use crate::controlled::CheckField;
 use crate::position::{Coord, Pos};
 
 pub const WIDTH: Coord = 10;
@@ -27,8 +28,10 @@ impl Field {
     pub fn set(&mut self, pos: Pos, value: FieldBlock) {
         self.blocks[pos.x as usize][pos.y as usize] = value;
     }
+}
 
-    pub fn is_open(&self, pos: Pos) -> bool {
+impl CheckField for Field {
+    fn is_open(&self, pos: Pos) -> bool {
         pos.x >= 0
             && pos.x < WIDTH
             && pos.y >= 0

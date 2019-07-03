@@ -1,4 +1,7 @@
-// Draw some multi-colored geometry to the screen
+#[cfg(test)]
+#[macro_use]
+extern crate double;
+
 extern crate quicksilver;
 
 mod controlled;

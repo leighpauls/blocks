@@ -2,7 +2,7 @@ use std::ops::Add;
 
 pub type Coord = i32;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Pos {
     pub x: Coord,
     pub y: Coord,
