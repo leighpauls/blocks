@@ -6,10 +6,10 @@ extern crate quicksilver;
 
 mod controlled;
 mod field;
+mod gamestate;
 mod position;
 
-use controlled::{ControlledBlocks, DropResult};
-use field::{Field, FieldBlock};
+use gamestate::{GameState, DrawBlockType};
 use position::{Pos, ShiftDir};
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
@@ -18,60 +18,41 @@ use quicksilver::{
     lifecycle::{run, Event, Settings, State, Window},
     Result,
 };
-use std::time::{Instant, Duration};
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
 struct Game {
     // Initialzied on the first loop
-    game_state_option: Option<GameState>,
-}
-
-struct GameState {
-    screen_size: Vector,
-    field: Field,
-    controlled_blocks: ControlledBlocks,
-    game_start_time: Instant,
+    state_option: Option<(GameState, Vector)>,
 }
 
 impl Game {
-    fn handle_drop(&mut self, drop_result: DropResult) {
-        if let DropResult::Continue = drop_result {
-            // These blocks are still dropping
-            return;
-        }
-        for pos in self.game_state().controlled_blocks.positions().iter() {
-            self.game_state().field.set(*pos, FieldBlock::Occupied);
-        }
-
-        // Replace the stopped blocks with new ones
-        self.game_state().controlled_blocks = ControlledBlocks::new(self.game_state().game_time());
-    }
-
     fn game_state(&mut self) -> &mut GameState {
-        self.game_state_option
+        &mut self
+            .state_option
             .as_mut()
             .expect("Getting game state beore first loop")
+            .0
     }
-}
-
-impl GameState {
-    fn game_time(&self) -> Duration {
-        Instant::now() - self.game_start_time
+    fn screen_size(&self) -> Vector {
+        self.state_option
+            .as_ref()
+            .expect("Getting screen size before first loop")
+            .1
     }
 }
 
 impl State for Game {
     fn new() -> Result<Game> {
         Ok(Game {
-            game_state_option: None,
+            state_option: None,
         })
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
 
-        let screen_size = self.game_state().screen_size;
+        let screen_size = self.screen_size();
         let full_height = screen_size.y;
         let block_size = BLOCK_SIZE_RATIO * full_height;
 
@@ -79,6 +60,7 @@ impl State for Game {
             screen_size.x * 0.5 - (0.5 * block_size * field::WIDTH as f32),
             screen_size.y * 0.5 - (0.5 * block_size * field::HEIGHT as f32),
         ));
+        let game_state = self.game_state();
         for y in 0..field::HEIGHT {
             for x in 0..field::WIDTH {
                 window.draw_ex(
@@ -86,19 +68,10 @@ impl State for Game {
                         (block_size * x as f32, block_size * y as f32),
                         (block_size, block_size),
                     ),
-                    match self.game_state().field.at(Pos::new(x, y)) {
-                        FieldBlock::Empty => {
-                            if self
-                                .game_state()
-                                .controlled_blocks
-                                .is_controlled(Pos::new(x, y))
-                            {
-                                Color::GREEN
-                            } else {
-                                Color::BLUE
-                            }
-                        }
-                        FieldBlock::Occupied => Color::RED,
+                    match game_state.draw_block_type_at(Pos::new(x, y)) {
+                        DrawBlockType::Empty => Color::BLUE,
+                        DrawBlockType::Controlled => Color::GREEN,
+                        DrawBlockType::Occupied => Color::RED,
                     },
                     field_transform,
                     0,
@@ -109,40 +82,24 @@ impl State for Game {
     }
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
-        if let None = self.game_state_option {
-            let start_time = Instant::now();
-            self.game_state_option = Some(GameState {
-                screen_size: window.screen_size(),
-                field: Field::new(),
-                controlled_blocks: ControlledBlocks::new(Instant::now() - start_time),
-                game_start_time: start_time,
-            });
+        if let None = self.state_option {
+            self.state_option = Some((GameState::new(), window.screen_size()));
         }
 
-        let game_state = self.game_state();
-        let drop_result = game_state
-            .controlled_blocks
-            .maybe_periodic_drop(&game_state.field, game_state.game_time());
-        self.handle_drop(drop_result);
-
+        self.game_state().update();
         Ok(())
     }
 
     fn event(&mut self, event: &Event, window: &mut Window) -> Result<()> {
         let game_state = self.game_state();
         match event {
-            Event::Key(Key::Left, ButtonState::Pressed) => game_state
-                .controlled_blocks
-                .shift(&game_state.field, ShiftDir::Left),
-            Event::Key(Key::Right, ButtonState::Pressed) => game_state
-                .controlled_blocks
-                .shift(&game_state.field, ShiftDir::Right),
-            Event::Key(Key::Down, ButtonState::Pressed) => {
-                let drop_result = game_state
-                    .controlled_blocks
-                    .manual_soft_drop(&game_state.field, game_state.game_time());
-                self.handle_drop(drop_result)
+            Event::Key(Key::Left, ButtonState::Pressed) => {
+                game_state.on_input_shift(ShiftDir::Left)
             }
+            Event::Key(Key::Right, ButtonState::Pressed) => {
+                game_state.on_input_shift(ShiftDir::Right)
+            }
+            Event::Key(Key::Down, ButtonState::Pressed) => game_state.on_input_soft_drop(),
             Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),
             _ => (),
         }
