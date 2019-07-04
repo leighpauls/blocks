@@ -21,12 +21,12 @@ pub enum DropResult {
 impl ControlledBlocks {
     pub fn new(start_time: Duration) -> ControlledBlocks {
         ControlledBlocks {
-            root_pos: p(0, 0),
+            root_pos: p(4, 0),
             relative_poses: [
+                p(-1, 0),
                 p(0, 0),
                 p(1, 0),
                 p(2, 0),
-                p(3, 0),
             ],
             next_drop_time: start_time + DROP_PERIOD,
         }
@@ -97,14 +97,14 @@ mod tests {
     #[test]
     fn controlled() {
         let b = blocks();
-        assert_eq!(true, b.is_controlled(p(0, 0)));
-        assert_eq!(false, b.is_controlled(p(0, 1)));
+        assert_eq!(true, b.is_controlled(p(4, 0)));
+        assert_eq!(false, b.is_controlled(p(0, 0)));
     }
 
     #[test]
     fn shift() {
         let mock_field = MockCheckField::default();
-        mock_field.is_open.return_value_for(p(5, 0), false);
+        mock_field.is_open.return_value_for(p(8, 0), false);
         mock_field.is_open.return_value(true);
 
         let mut b = blocks();
@@ -112,8 +112,8 @@ mod tests {
         b.shift(&mock_field, ShiftDir::Right);
 
         // Asset I shifted only once
-        assert_eq!(false, b.is_controlled(p(0, 0)));
-        assert_eq!(true, b.is_controlled(p(1, 0)));
+        assert_eq!(false, b.is_controlled(p(3, 0)));
+        assert_eq!(true, b.is_controlled(p(4, 0)));
     }
 
     #[test]
@@ -124,10 +124,10 @@ mod tests {
         let mut b = blocks();
 
         b.maybe_periodic_drop(&mock_field, Duration::from_millis(10));
-        assert_eq!(true, b.is_controlled(p(0, 0)));
+        assert_eq!(true, b.is_controlled(p(5, 0)));
 
         b.maybe_periodic_drop(&mock_field, Duration::from_millis(1010));
-        assert_eq!(false, b.is_controlled(p(0, 0)));
+        assert_eq!(false, b.is_controlled(p(5, 0)));
     }
 
     #[test]
@@ -136,10 +136,10 @@ mod tests {
         assert_that!(
             &b.positions(),
             contains(vec!(
-                p(0, 0),
-                p(1, 0),
-                p(2, 0),
-                p(3, 0)
+                p(3, 0),
+                p(4, 0),
+                p(5, 0),
+                p(6, 0)
             ))
             .exactly()
         );
