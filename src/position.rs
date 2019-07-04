@@ -14,6 +14,10 @@ pub enum ShiftDir {
     Right,
 }
 
+pub fn p<T: Into<Coord>>(x: T, y: T) -> Pos {
+    Pos::new(x, y)
+}
+
 impl Pos {
     pub fn new<T: Into<Coord>>(x: T, y: T) -> Pos {
         Pos {

@@ -2,6 +2,10 @@
 #[macro_use]
 extern crate double;
 
+#[cfg(test)]
+#[macro_use]
+extern crate hamcrest2;
+
 extern crate quicksilver;
 
 mod controlled;

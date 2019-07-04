@@ -9,3 +9,4 @@ quicksilver = "*"
 
 [dev-dependencies]
 double = "0.2.3"
+hamcrest2 = "0.2.6"
