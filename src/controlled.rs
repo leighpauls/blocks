@@ -1,4 +1,5 @@
-use crate::position::{Pos, ShiftDir, p};
+use crate::field;
+use crate::position::{p, Pos, ShiftDir};
 use std::time::Duration;
 
 pub trait CheckField {
@@ -13,6 +14,10 @@ pub struct ControlledBlocks {
 
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
 
+fn start_pos() -> Pos {
+    p(4, field::PLAYING_BOUNDARY_HEIGHT)
+}
+
 pub enum DropResult {
     Continue,
     Stop,
@@ -21,13 +26,8 @@ pub enum DropResult {
 impl ControlledBlocks {
     pub fn new(start_time: Duration) -> ControlledBlocks {
         ControlledBlocks {
-            root_pos: p(4, 0),
-            relative_poses: [
-                p(-1, 0),
-                p(0, 0),
-                p(1, 0),
-                p(2, 0),
-            ],
+            root_pos: start_pos(),
+            relative_poses: [p(-1, 0), p(0, 0), p(1, 0), p(2, 0)],
             next_drop_time: start_time + DROP_PERIOD,
         }
     }
@@ -73,7 +73,7 @@ impl ControlledBlocks {
     }
 
     fn soft_drop(&mut self, field: &CheckField) -> DropResult {
-        let delta = p(0, 1);
+        let delta = p(0, -1);
         for pos in self.relative_poses.iter() {
             if !field.is_open(self.root_pos + *pos + delta) {
                 return DropResult::Stop;
@@ -97,14 +97,14 @@ mod tests {
     #[test]
     fn controlled() {
         let b = blocks();
-        assert_eq!(true, b.is_controlled(p(4, 0)));
+        assert_eq!(true, b.is_controlled(start_pos()));
         assert_eq!(false, b.is_controlled(p(0, 0)));
     }
 
     #[test]
     fn shift() {
         let mock_field = MockCheckField::default();
-        mock_field.is_open.return_value_for(p(8, 0), false);
+        mock_field.is_open.return_value_for(start_pos() + p(4, 0), false);
         mock_field.is_open.return_value(true);
 
         let mut b = blocks();
@@ -112,8 +112,8 @@ mod tests {
         b.shift(&mock_field, ShiftDir::Right);
 
         // Asset I shifted only once
-        assert_eq!(false, b.is_controlled(p(3, 0)));
-        assert_eq!(true, b.is_controlled(p(4, 0)));
+        assert_eq!(false, b.is_controlled(start_pos() + p(-1, 0)));
+        assert_eq!(true, b.is_controlled(start_pos()));
     }
 
     #[test]
@@ -124,25 +124,10 @@ mod tests {
         let mut b = blocks();
 
         b.maybe_periodic_drop(&mock_field, Duration::from_millis(10));
-        assert_eq!(true, b.is_controlled(p(5, 0)));
+        assert_eq!(true, b.is_controlled(start_pos()));
 
         b.maybe_periodic_drop(&mock_field, Duration::from_millis(1010));
-        assert_eq!(false, b.is_controlled(p(5, 0)));
-    }
-
-    #[test]
-    fn positions() {
-        let b = blocks();
-        assert_that!(
-            &b.positions(),
-            contains(vec!(
-                p(3, 0),
-                p(4, 0),
-                p(5, 0),
-                p(6, 0)
-            ))
-            .exactly()
-        );
+        assert_eq!(false, b.is_controlled(start_pos()));
     }
 
     fn blocks() -> ControlledBlocks {

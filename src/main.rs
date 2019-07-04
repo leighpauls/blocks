@@ -13,7 +13,7 @@ mod field;
 mod gamestate;
 mod position;
 
-use gamestate::{GameState, DrawBlockType};
+use gamestate::{DrawBlockType, GameState};
 use position::{Pos, ShiftDir};
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
@@ -48,9 +48,7 @@ impl Game {
 
 impl State for Game {
     fn new() -> Result<Game> {
-        Ok(Game {
-            state_option: None,
-        })
+        Ok(Game { state_option: None })
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
@@ -62,14 +60,17 @@ impl State for Game {
 
         let field_transform = Transform::translate((
             screen_size.x * 0.5 - (0.5 * block_size * field::WIDTH as f32),
-            screen_size.y * 0.5 - (0.5 * block_size * field::HEIGHT as f32),
+            screen_size.y * 0.5 - (0.5 * block_size * field::VISIBLE_HEIGHT as f32),
         ));
         let game_state = self.game_state();
-        for y in 0..field::HEIGHT {
+        for y in 0..field::VISIBLE_HEIGHT {
             for x in 0..field::WIDTH {
                 window.draw_ex(
                     &Rectangle::new(
-                        (block_size * x as f32, block_size * y as f32),
+                        (
+                            block_size * x as f32,
+                            block_size * (field::VISIBLE_HEIGHT - y - 1) as f32,
+                        ),
                         (block_size, block_size),
                     ),
                     match game_state.draw_block_type_at(Pos::new(x, y)) {

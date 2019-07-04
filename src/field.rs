@@ -2,7 +2,9 @@ use crate::controlled::CheckField;
 use crate::position::{Coord, Pos};
 
 pub const WIDTH: Coord = 10;
-pub const HEIGHT: Coord = 22;
+pub const GAME_HEIGHT: Coord = 40;
+pub const VISIBLE_HEIGHT: Coord = 22;
+pub const PLAYING_BOUNDARY_HEIGHT: Coord = 20;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum FieldBlock {
@@ -11,13 +13,13 @@ pub enum FieldBlock {
 }
 
 pub struct Field {
-    blocks: [[FieldBlock; HEIGHT as usize]; WIDTH as usize],
+    blocks: [[FieldBlock; GAME_HEIGHT as usize]; WIDTH as usize],
 }
 
 impl Field {
     pub fn new() -> Field {
         Field {
-            blocks: [[FieldBlock::Empty; HEIGHT as usize]; WIDTH as usize],
+            blocks: [[FieldBlock::Empty; GAME_HEIGHT as usize]; WIDTH as usize],
         }
     }
 
@@ -35,7 +37,7 @@ impl CheckField for Field {
         pos.x >= 0
             && pos.x < WIDTH
             && pos.y >= 0
-            && pos.y < HEIGHT
+            && pos.y < GAME_HEIGHT
             && self.at(pos) == FieldBlock::Empty
     }
 }
@@ -67,6 +69,6 @@ mod tests {
         assert_eq!(false, f.is_open(Pos::new(0, -1)));
 
         assert_eq!(false, f.is_open(Pos::new(WIDTH, 0)));
-        assert_eq!(false, f.is_open(Pos::new(0, HEIGHT)));
+        assert_eq!(false, f.is_open(Pos::new(0, GAME_HEIGHT)));
     }
 }
