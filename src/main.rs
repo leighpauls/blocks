@@ -12,6 +12,7 @@ mod controlled;
 mod field;
 mod gamestate;
 mod position;
+mod time;
 
 use gamestate::{DrawBlockType, GameState};
 use position::{Pos, ShiftDir};

@@ -1,12 +1,12 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, FieldBlock};
 use crate::position::{Pos, ShiftDir};
-use std::time::{Duration, Instant};
+use crate::time::GameClock;
 
 pub struct GameState {
     field: Field,
     controlled_blocks: ControlledBlocks,
-    game_start_time: Instant,
+    clock: GameClock,
 }
 
 pub enum DrawBlockType {
@@ -17,18 +17,19 @@ pub enum DrawBlockType {
 
 impl GameState {
     pub fn new() -> GameState {
-        let start_time = Instant::now();
+        let clock = GameClock::new();
+        let now = clock.now();
         GameState {
             field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(Instant::now() - start_time),
-            game_start_time: start_time,
+            controlled_blocks: ControlledBlocks::new(now),
+            clock: clock,
         }
     }
 
     pub fn update(&mut self) {
         let drop_result = self
             .controlled_blocks
-            .maybe_periodic_drop(&self.field, self.game_time());
+            .maybe_periodic_drop(&self.field, self.clock.now());
         self.handle_drop(drop_result);
     }
 
@@ -39,7 +40,7 @@ impl GameState {
     pub fn on_input_soft_drop(&mut self) {
         let drop_result = self
             .controlled_blocks
-            .manual_soft_drop(&self.field, self.game_time());
+            .manual_soft_drop(&self.field, self.clock.now());
         self.handle_drop(drop_result)
     }
 
@@ -56,10 +57,6 @@ impl GameState {
         }
     }
 
-    fn game_time(&self) -> Duration {
-        Instant::now() - self.game_start_time
-    }
-
     fn handle_drop(&mut self, drop_result: DropResult) {
         if let DropResult::Continue = drop_result {
             // These blocks are still dropping
@@ -70,6 +67,6 @@ impl GameState {
         }
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new(self.game_time());
+        self.controlled_blocks = ControlledBlocks::new(self.clock.now());
     }
 }
