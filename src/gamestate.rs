@@ -1,5 +1,5 @@
 use crate::controlled::{ControlledBlocks, DropResult};
-use crate::field::{Field, FieldBlock};
+use crate::field::{self, Field, FieldBlock};
 use crate::position::{Pos, ShiftDir};
 use crate::shapes::Shape;
 use crate::time::GameClock;
@@ -14,6 +14,7 @@ pub enum DrawBlockType {
     Empty,
     Controlled,
     Occupied,
+    OutOfPlay,
 }
 
 impl GameState {
@@ -50,6 +51,8 @@ impl GameState {
             FieldBlock::Empty => {
                 if self.controlled_blocks.is_controlled(pos) {
                     DrawBlockType::Controlled
+                } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
+                    DrawBlockType::OutOfPlay
                 } else {
                     DrawBlockType::Empty
                 }

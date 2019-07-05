@@ -75,6 +75,7 @@ impl State for Game {
                         DrawBlockType::Empty => Color::BLUE,
                         DrawBlockType::Controlled => Color::GREEN,
                         DrawBlockType::Occupied => Color::RED,
+                        DrawBlockType::OutOfPlay => Color::YELLOW,
                     },
                     field_transform,
                     0,
