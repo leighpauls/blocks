@@ -23,7 +23,7 @@ impl GameState {
         let now = clock.now();
         GameState {
             field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(now, Shape::I),
+            controlled_blocks: ControlledBlocks::new(now, Shape::random()),
             clock: clock,
         }
     }
@@ -75,6 +75,6 @@ impl GameState {
         }
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::I);
+        self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::random());
     }
 }

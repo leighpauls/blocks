@@ -16,7 +16,7 @@ pub enum ShiftDir {
 }
 
 /// Number of clockwise rotations
-#[derive(Copy, Clone, PartialEq, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Copy, Clone, PartialEq, Debug, FromPrimitive)]
 pub enum Rotations {
     Zero,
     One,
