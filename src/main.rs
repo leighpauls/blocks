@@ -15,7 +15,7 @@ mod shapes;
 mod time;
 
 use gamestate::{DrawBlockType, GameState};
-use position::{Pos, ShiftDir};
+use position::{Pos, RotateDir, ShiftDir};
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::Color,
@@ -107,6 +107,8 @@ impl State for Game {
                 game_state.on_input_shift(ShiftDir::Right)
             }
             Event::Key(Key::Down, ButtonState::Pressed) => game_state.on_input_soft_drop(),
+            Event::Key(Key::Z, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CCW),
+            Event::Key(Key::X, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CW),
             Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),
             _ => (),
         }

@@ -1,6 +1,6 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{self, Field, FieldBlock};
-use crate::position::{Pos, ShiftDir};
+use crate::position::{Pos, RotateDir, ShiftDir};
 use crate::shapes::Shape;
 use crate::time::GameClock;
 
@@ -44,6 +44,10 @@ impl GameState {
             .controlled_blocks
             .manual_soft_drop(&self.field, self.clock.now());
         self.handle_drop(drop_result)
+    }
+
+    pub fn on_input_rotate(&mut self, dir: RotateDir) {
+        self.controlled_blocks.rotate(&self.field, dir);
     }
 
     pub fn draw_block_type_at(&self, pos: Pos) -> DrawBlockType {

@@ -1,5 +1,5 @@
 use crate::field;
-use crate::position::{p, Pos, Rotations, ShiftDir};
+use crate::position::{p, Pos, RotateDir, Rotations, ShiftDir};
 use crate::shapes::{shape_positions, Shape};
 use crate::time::GameTime;
 use std::time::Duration;
@@ -11,6 +11,7 @@ pub trait CheckField {
 pub struct ControlledBlocks {
     root_pos: Pos,
     shape: Shape,
+    rotation: Rotations,
     next_drop_time: GameTime,
 }
 
@@ -30,13 +31,15 @@ impl ControlledBlocks {
         ControlledBlocks {
             root_pos: start_pos(),
             shape: shape,
+            rotation: Rotations::Zero,
             next_drop_time: start_time + DROP_PERIOD,
         }
     }
 
     pub fn positions(&self) -> [Pos; 4] {
         let shape = self.shape;
-        self.root_pos + shape_positions(shape, Rotations::Zero)
+        let rot = self.rotation;
+        self.root_pos + shape_positions(shape, rot)
     }
 
     pub fn is_controlled(&self, target: Pos) -> bool {
@@ -56,6 +59,10 @@ impl ControlledBlocks {
             }
         }
         self.root_pos = self.root_pos + dir;
+    }
+
+    pub fn rotate(&mut self, field: &CheckField, dir: RotateDir) {
+        self.rotation = self.rotation + dir;
     }
 
     pub fn maybe_periodic_drop(&mut self, field: &CheckField, now: GameTime) -> DropResult {
