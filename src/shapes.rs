@@ -1,4 +1,4 @@
-use crate::position::{p, RelativePoses, Rotations};
+use crate::position::{p, Pos, RelativePoses, RotateDir, Rotations};
 
 #[derive(Copy, Clone)]
 pub enum Shape {
@@ -22,5 +22,27 @@ pub fn shape_positions(shape: Shape, rotations: Rotations) -> RelativePoses {
 
         #[cfg(test)]
         (TestShape, _) => [p(0, 0); 4],
+    }
+}
+
+pub fn wall_kick_offsets(shape: Shape, initial_rot: Rotations, rot_dir: RotateDir) -> Vec<Pos> {
+    use RotateDir::*;
+    use Rotations::*;
+    use Shape::*;
+    match (shape, initial_rot, rot_dir) {
+        (O, _, _) => vec![p(0, 0)],
+
+        (I, Zero, CW) => vec![p(0, 0), p(-2, 0), p(1, 0), p(-2, -1), p(1, 2)],
+        (I, One, CW) => vec![p(0, 0), p(-1, 0), p(2, 0), p(-1, 2), p(2, -1)],
+        (I, Two, CW) => vec![p(0, 0), p(2, 0), p(-1, 0), p(2, 1), p(-1, -2)],
+        (I, Three, CW) => vec![p(0, 0), p(1, 0), p(-2, 0), p(1, -2), p(-2, 1)],
+
+        (I, Zero, CCW) => vec![p(0, 0), p(-1, 0), p(2, 0), p(-1, 2), p(2, -1)],
+        (I, One, CCW) => vec![p(0, 0), p(2, 0), p(-1, 0), p(2, 1), p(-1, -2)],
+        (I, Two, CCW) => vec![p(0, 0), p(1, 0), p(-2, 0), p(1, -2), p(-2, 1)],
+        (I, Three, CCW) => vec![p(0, 0), p(-2, 0), p(1, 0), p(-2, -1), p(1, 2)],
+
+        #[cfg(test)]
+        (TestShape, _, _) => vec![p(0, 0)],
     }
 }

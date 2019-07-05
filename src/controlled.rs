@@ -1,6 +1,6 @@
 use crate::field;
 use crate::position::{p, Pos, RotateDir, Rotations, ShiftDir};
-use crate::shapes::{shape_positions, Shape};
+use crate::shapes::{shape_positions, wall_kick_offsets, Shape};
 use crate::time::GameTime;
 use std::time::Duration;
 
@@ -62,17 +62,10 @@ impl ControlledBlocks {
     }
 
     pub fn rotate(&mut self, field: &CheckField, dir: RotateDir) {
-        let new_rotation = self.rotation + dir;
-        let shape = self.shape;
-        let new_positions = self.root_pos + shape_positions(shape, new_rotation);
-        // Verify the new position is legal
-        for pos in new_positions.iter() {
-            if !field.is_open(*pos) {
-                return;
-            }
+        if let Some((new_root, new_rotation)) = self.find_wall_kick(field, dir) {
+            self.root_pos = new_root;
+            self.rotation = new_rotation;
         }
-
-        self.rotation = new_rotation;
     }
 
     pub fn maybe_periodic_drop(&mut self, field: &CheckField, now: GameTime) -> DropResult {
@@ -97,6 +90,25 @@ impl ControlledBlocks {
         }
         self.root_pos = self.root_pos + delta;
         DropResult::Continue
+    }
+
+    fn find_wall_kick(&self, field: &CheckField, dir: RotateDir) -> Option<(Pos, Rotations)> {
+        let shape = self.shape;
+        let new_rotation = self.rotation + dir;
+
+        'kick: for kick_offset in wall_kick_offsets(shape, self.rotation, dir).into_iter() {
+            let new_root = self.root_pos + kick_offset;
+            let new_positions = new_root + shape_positions(shape, new_rotation);
+
+            for pos in new_positions.iter() {
+                if !field.is_open(*pos) {
+                    continue 'kick;
+                }
+            }
+
+            return Some((new_root, new_rotation));
+        }
+        None
     }
 }
 
