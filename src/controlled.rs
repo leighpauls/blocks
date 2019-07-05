@@ -1,5 +1,6 @@
 use crate::field;
 use crate::position::{p, Pos, ShiftDir};
+use crate::shapes::{shape_positions, Rotations, Shape};
 use crate::time::GameTime;
 use std::time::Duration;
 
@@ -9,14 +10,14 @@ pub trait CheckField {
 
 pub struct ControlledBlocks {
     root_pos: Pos,
-    relative_poses: [Pos; 4],
+    shape: Shape,
     next_drop_time: GameTime,
 }
 
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
 
 fn start_pos() -> Pos {
-    p(4, field::PLAYING_BOUNDARY_HEIGHT)
+    p(3, field::PLAYING_BOUNDARY_HEIGHT - 2)
 }
 
 pub enum DropResult {
@@ -25,25 +26,22 @@ pub enum DropResult {
 }
 
 impl ControlledBlocks {
-    pub fn new(start_time: GameTime) -> ControlledBlocks {
+    pub fn new(start_time: GameTime, shape: Shape) -> ControlledBlocks {
         ControlledBlocks {
             root_pos: start_pos(),
-            relative_poses: [p(-1, 0), p(0, 0), p(1, 0), p(2, 0)],
+            shape: shape,
             next_drop_time: start_time + DROP_PERIOD,
         }
     }
 
     pub fn positions(&self) -> [Pos; 4] {
-        let mut result = self.relative_poses;
-        for pos in result.iter_mut() {
-            *pos = *pos + self.root_pos;
-        }
-        result
+        let shape = self.shape;
+        self.root_pos + shape_positions(shape, Rotations::Zero)
     }
 
     pub fn is_controlled(&self, target: Pos) -> bool {
-        for relative in self.relative_poses.iter() {
-            if self.root_pos + *relative == target {
+        for pos in self.positions().iter() {
+            if *pos == target {
                 return true;
             }
         }
@@ -52,8 +50,8 @@ impl ControlledBlocks {
 
     pub fn shift(&mut self, field: &CheckField, dir: ShiftDir) {
         // Don't move if it's not legal
-        for pos in self.relative_poses.iter() {
-            if !field.is_open(self.root_pos + *pos + dir) {
+        for pos in self.positions().iter() {
+            if !field.is_open(*pos + dir) {
                 return;
             }
         }
@@ -75,8 +73,8 @@ impl ControlledBlocks {
 
     fn soft_drop(&mut self, field: &CheckField) -> DropResult {
         let delta = p(0, -1);
-        for pos in self.relative_poses.iter() {
-            if !field.is_open(self.root_pos + *pos + delta) {
+        for pos in self.positions().iter() {
+            if !field.is_open(*pos + delta) {
                 return DropResult::Stop;
             }
         }
@@ -89,7 +87,6 @@ impl ControlledBlocks {
 mod tests {
     use super::*;
     use crate::time::GameClock;
-    use hamcrest2::prelude::*;
 
     mock_trait!(MockCheckField, is_open(Pos) -> bool);
     impl CheckField for MockCheckField {
@@ -108,7 +105,7 @@ mod tests {
         let mock_field = MockCheckField::default();
         mock_field
             .is_open
-            .return_value_for(start_pos() + p(4, 0), false);
+            .return_value_for(start_pos() + p(2, 0), false);
         mock_field.is_open.return_value(true);
 
         let mut b = blocks();
@@ -116,8 +113,8 @@ mod tests {
         b.shift(&mock_field, ShiftDir::Right);
 
         // Asset I shifted only once
-        assert_eq!(false, b.is_controlled(start_pos() + p(-1, 0)));
-        assert_eq!(true, b.is_controlled(start_pos()));
+        assert_eq!(false, b.is_controlled(start_pos()));
+        assert_eq!(true, b.is_controlled(start_pos() + ShiftDir::Right));
     }
 
     #[test]
@@ -127,7 +124,7 @@ mod tests {
 
         let clock = GameClock::new();
         let start_time = clock.now();
-        let mut b = ControlledBlocks::new(start_time);
+        let mut b = ControlledBlocks::new(start_time, Shape::TestShape);
 
         b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(10));
         assert_eq!(true, b.is_controlled(start_pos()));
@@ -137,6 +134,6 @@ mod tests {
     }
 
     fn blocks() -> ControlledBlocks {
-        ControlledBlocks::new(GameClock::new().now())
+        ControlledBlocks::new(GameClock::new().now(), Shape::TestShape)
     }
 }

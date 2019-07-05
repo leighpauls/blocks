@@ -2,16 +2,13 @@
 #[macro_use]
 extern crate double;
 
-#[cfg(test)]
-#[macro_use]
-extern crate hamcrest2;
-
 extern crate quicksilver;
 
 mod controlled;
 mod field;
 mod gamestate;
 mod position;
+mod shapes;
 mod time;
 
 use gamestate::{DrawBlockType, GameState};

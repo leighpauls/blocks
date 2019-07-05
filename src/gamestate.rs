@@ -1,6 +1,7 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, FieldBlock};
 use crate::position::{Pos, ShiftDir};
+use crate::shapes::Shape;
 use crate::time::GameClock;
 
 pub struct GameState {
@@ -21,7 +22,7 @@ impl GameState {
         let now = clock.now();
         GameState {
             field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(now),
+            controlled_blocks: ControlledBlocks::new(now, Shape::I),
             clock: clock,
         }
     }
@@ -67,6 +68,6 @@ impl GameState {
         }
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new(self.clock.now());
+        self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::I);
     }
 }
