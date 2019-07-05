@@ -1,8 +1,11 @@
 #[cfg(test)]
 #[macro_use]
 extern crate double;
-
 extern crate quicksilver;
+
+#[macro_use]
+extern crate num_derive;
+extern crate num_traits;
 
 mod controlled;
 mod field;

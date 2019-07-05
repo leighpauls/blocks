@@ -1,3 +1,4 @@
+use num_traits::FromPrimitive;
 use std::ops::Add;
 
 pub type Coord = i32;
@@ -12,6 +13,21 @@ pub struct Pos {
 pub enum ShiftDir {
     Left,
     Right,
+}
+
+/// Number of clockwise rotations
+#[derive(Copy, Clone, PartialEq, Debug, FromPrimitive, ToPrimitive)]
+pub enum Rotations {
+    Zero,
+    One,
+    Two,
+    Three,
+}
+
+#[derive(Copy, Clone)]
+pub enum RotateDir {
+    CW,
+    CCW,
 }
 
 pub type RelativePoses = [Pos; 4];
@@ -62,17 +78,29 @@ impl Add<RelativePoses> for Pos {
     }
 }
 
+impl Add<RotateDir> for Rotations {
+    type Output = Self;
+    fn add(self, other: RotateDir) -> Self {
+        let delta = match other {
+            RotateDir::CW => 1,
+            RotateDir::CCW => 3,
+        };
+
+        Rotations::from_i32((self as i32 + delta) % 4).expect("Unexpected rotation count")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn add() {
+    fn add_pos() {
         assert_eq!(p(1, 2) + p(3, 4), p(4, 6));
     }
 
     #[test]
-    fn shift() {
+    fn shift_pos() {
         assert_eq!(p(4, 8) + ShiftDir::Left, p(3, 8));
         assert_eq!(p(4, 8) + ShiftDir::Right, p(5, 8));
     }
@@ -83,5 +111,12 @@ mod tests {
         let expected: RelativePoses = [p(1, 1), p(2, 2), p(3, 3), p(4, 4)];
 
         assert_eq!(expected, p(1, 1) + start);
+    }
+
+    #[test]
+    fn add_rotations() {
+        assert_eq!(Rotations::Two, Rotations::One + RotateDir::CW);
+        assert_eq!(Rotations::Three, Rotations::Zero + RotateDir::CCW);
+        assert_eq!(Rotations::Zero, Rotations::Three + RotateDir::CW);
     }
 }

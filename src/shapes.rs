@@ -1,4 +1,4 @@
-use crate::position::{p, RelativePoses};
+use crate::position::{p, RelativePoses, Rotations};
 
 #[derive(Copy, Clone)]
 pub enum Shape {
@@ -7,14 +7,6 @@ pub enum Shape {
 
     #[cfg(test)]
     TestShape,
-}
-
-// Number of clockwise rotations
-pub enum Rotations {
-    Zero = 0,
-    One = 1,
-    Two = 2,
-    Three = 3,
 }
 
 pub fn shape_positions(shape: Shape, rotations: Rotations) -> RelativePoses {

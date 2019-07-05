@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 quicksilver = "*"
+num-derive = "0.2.5"
+num-traits = "0.2.8"
 
 [dev-dependencies]
 double = "0.2.3"

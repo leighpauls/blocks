@@ -1,6 +1,6 @@
 use crate::field;
-use crate::position::{p, Pos, ShiftDir};
-use crate::shapes::{shape_positions, Rotations, Shape};
+use crate::position::{p, Pos, Rotations, ShiftDir};
+use crate::shapes::{shape_positions, Shape};
 use crate::time::GameTime;
 use std::time::Duration;
 
