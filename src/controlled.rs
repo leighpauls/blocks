@@ -62,7 +62,17 @@ impl ControlledBlocks {
     }
 
     pub fn rotate(&mut self, field: &CheckField, dir: RotateDir) {
-        self.rotation = self.rotation + dir;
+        let new_rotation = self.rotation + dir;
+        let shape = self.shape;
+        let new_positions = self.root_pos + shape_positions(shape, new_rotation);
+        // Verify the new position is legal
+        for pos in new_positions.iter() {
+            if !field.is_open(*pos) {
+                return;
+            }
+        }
+
+        self.rotation = new_rotation;
     }
 
     pub fn maybe_periodic_drop(&mut self, field: &CheckField, now: GameTime) -> DropResult {
