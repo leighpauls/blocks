@@ -1,6 +1,6 @@
 use crate::field;
 use crate::position::{p, Pos, RotateDir, Rotations, ShiftDir};
-use crate::shapes::{shape_positions, wall_kick_offsets, Shape};
+use crate::shapes::{Shape, ShapeDef};
 use crate::time::GameTime;
 use std::time::Duration;
 
@@ -8,9 +8,10 @@ pub trait CheckField {
     fn is_open(&self, pos: Pos) -> bool;
 }
 
-pub struct ControlledBlocks {
+pub type ControlledBlocks = ControlledBlocksImpl<Shape>;
+pub struct ControlledBlocksImpl<TShape: ShapeDef> {
     root_pos: Pos,
-    shape: Shape,
+    shape: TShape,
     rotation: Rotations,
     next_drop_time: GameTime,
 }
@@ -26,9 +27,9 @@ pub enum DropResult {
     Stop,
 }
 
-impl ControlledBlocks {
-    pub fn new(start_time: GameTime, shape: Shape) -> ControlledBlocks {
-        ControlledBlocks {
+impl<TShape: ShapeDef> ControlledBlocksImpl<TShape> {
+    pub fn new(start_time: GameTime, shape: TShape) -> ControlledBlocksImpl<TShape> {
+        ControlledBlocksImpl::<TShape> {
             root_pos: start_pos(),
             shape: shape,
             rotation: Rotations::Zero,
@@ -37,9 +38,8 @@ impl ControlledBlocks {
     }
 
     pub fn positions(&self) -> [Pos; 4] {
-        let shape = self.shape;
         let rot = self.rotation;
-        self.root_pos + shape_positions(shape, rot)
+        self.root_pos + self.shape.positions(rot)
     }
 
     pub fn is_controlled(&self, target: Pos) -> bool {
@@ -93,12 +93,11 @@ impl ControlledBlocks {
     }
 
     fn find_wall_kick(&self, field: &CheckField, dir: RotateDir) -> Option<(Pos, Rotations)> {
-        let shape = self.shape;
         let new_rotation = self.rotation + dir;
 
-        'kick: for kick_offset in wall_kick_offsets(shape, self.rotation, dir).into_iter() {
+        'kick: for kick_offset in self.shape.wall_kick_offsets(self.rotation, dir).into_iter() {
             let new_root = self.root_pos + kick_offset;
-            let new_positions = new_root + shape_positions(shape, new_rotation);
+            let new_positions = new_root + self.shape.positions(new_rotation);
 
             for pos in new_positions.iter() {
                 if !field.is_open(*pos) {
@@ -115,7 +114,18 @@ impl ControlledBlocks {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::position::RelativePoses;
     use crate::time::GameClock;
+
+    struct TestShape;
+    impl ShapeDef for TestShape {
+        fn positions(&self, _rotation: Rotations) -> RelativePoses {
+            [p(0, 0); 4]
+        }
+        fn wall_kick_offsets(&self, _initial_rot: Rotations, _rot_dir: RotateDir) -> Vec<Pos> {
+            vec![p(0, 0)]
+        }
+    }
 
     mock_trait!(MockCheckField, is_open(Pos) -> bool);
     impl CheckField for MockCheckField {
@@ -153,7 +163,7 @@ mod tests {
 
         let clock = GameClock::new();
         let start_time = clock.now();
-        let mut b = ControlledBlocks::new(start_time, Shape::TestShape);
+        let mut b = ControlledBlocksImpl::new(start_time, TestShape {});
 
         b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(10));
         assert_eq!(true, b.is_controlled(start_pos()));
@@ -162,7 +172,7 @@ mod tests {
         assert_eq!(false, b.is_controlled(start_pos()));
     }
 
-    fn blocks() -> ControlledBlocks {
-        ControlledBlocks::new(GameClock::new().now(), Shape::TestShape)
+    fn blocks() -> ControlledBlocksImpl<TestShape> {
+        ControlledBlocksImpl::new(GameClock::new().now(), TestShape {})
     }
 }
