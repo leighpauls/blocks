@@ -6,6 +6,15 @@ use std::time::Duration;
 
 pub trait CheckField {
     fn is_open(&self, pos: Pos) -> bool;
+
+    fn are_open(&self, positions: &[Pos; 4]) -> bool {
+        for p in positions.iter() {
+            if !self.is_open(*p) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 pub type ControlledBlocks = ControlledBlocksImpl<Shape>;
@@ -44,12 +53,10 @@ impl<TShape: ShapeDef> ControlledBlocksImpl<TShape> {
 
     pub fn shift(&mut self, field: &CheckField, dir: ShiftDir) {
         // Don't move if it's not legal
-        for pos in self.positions().iter() {
-            if !field.is_open(*pos + dir) {
-                return;
-            }
+        let new_positions = (self.root_pos + dir) + self.shape.positions(self.rotation);
+        if field.are_open(&new_positions) {
+            self.root_pos = self.root_pos + dir;
         }
-        self.root_pos = self.root_pos + dir;
     }
 
     pub fn rotate(&mut self, field: &CheckField, dir: RotateDir) {
@@ -74,13 +81,12 @@ impl<TShape: ShapeDef> ControlledBlocksImpl<TShape> {
 
     fn soft_drop(&mut self, field: &CheckField) -> DropResult {
         let delta = p(0, -1);
-        for pos in self.positions().iter() {
-            if !field.is_open(*pos + delta) {
-                return DropResult::Stop;
-            }
+        if field.are_open(&(delta + self.positions())) {
+            self.root_pos = self.root_pos + delta;
+            DropResult::Continue
+        } else {
+            DropResult::Stop
         }
-        self.root_pos = self.root_pos + delta;
-        DropResult::Continue
     }
 
     fn find_wall_kick(&self, field: &CheckField, dir: RotateDir) -> Option<(Pos, Rotations)> {
@@ -90,12 +96,9 @@ impl<TShape: ShapeDef> ControlledBlocksImpl<TShape> {
             let new_root = self.root_pos + kick_offset;
             let new_positions = new_root + self.shape.positions(new_rotation);
 
-            for pos in new_positions.iter() {
-                if !field.is_open(*pos) {
-                    continue 'kick;
-                }
+            if !field.are_open(&new_positions) {
+                continue 'kick;
             }
-
             return Some((new_root, new_rotation));
         }
         None
