@@ -15,6 +15,7 @@ pub enum DrawBlockType {
     Controlled,
     Occupied,
     OutOfPlay,
+    GhostPiece,
 }
 
 pub struct RenderBlockInfo {
@@ -62,6 +63,7 @@ impl GameState {
     pub fn render_block_info(&self) -> RenderInfo {
         let mut blocks = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
         let controlled_positions = self.controlled_blocks.positions();
+        let ghost_positions = self.controlled_blocks.ghost_positions(&self.field);
 
         for y in 0..field::VISIBLE_HEIGHT {
             for x in 0..field::WIDTH {
@@ -70,6 +72,8 @@ impl GameState {
                     FieldBlock::Empty => {
                         if controlled_positions.contains(&pos) {
                             DrawBlockType::Controlled
+                        } else if ghost_positions.contains(&pos) {
+                            DrawBlockType::GhostPiece
                         } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
                             DrawBlockType::OutOfPlay
                         } else {

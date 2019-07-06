@@ -83,6 +83,7 @@ impl State for Game {
                     DrawBlockType::Controlled => Color::GREEN,
                     DrawBlockType::Occupied => Color::RED,
                     DrawBlockType::OutOfPlay => Color::YELLOW,
+                    DrawBlockType::GhostPiece => Color::from_rgba(0xff, 0, 0xff, 1.0),
                 },
                 field_transform,
                 0,
