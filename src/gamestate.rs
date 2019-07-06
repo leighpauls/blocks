@@ -1,6 +1,6 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{self, Field, FieldBlock};
-use crate::position::{Pos, RotateDir, ShiftDir};
+use crate::position::{p, Pos, RotateDir, ShiftDir};
 use crate::shapes::Shape;
 use crate::time::GameClock;
 
@@ -15,6 +15,15 @@ pub enum DrawBlockType {
     Controlled,
     Occupied,
     OutOfPlay,
+}
+
+pub struct RenderBlockInfo {
+    pub pos: Pos,
+    pub block_type: DrawBlockType,
+}
+
+pub struct RenderInfo {
+    pub field: Vec<RenderBlockInfo>,
 }
 
 impl GameState {
@@ -50,19 +59,33 @@ impl GameState {
         self.controlled_blocks.rotate(&self.field, dir);
     }
 
-    pub fn draw_block_type_at(&self, pos: Pos) -> DrawBlockType {
-        match self.field.at(pos) {
-            FieldBlock::Empty => {
-                if self.controlled_blocks.is_controlled(pos) {
-                    DrawBlockType::Controlled
-                } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
-                    DrawBlockType::OutOfPlay
-                } else {
-                    DrawBlockType::Empty
-                }
+    pub fn render_block_info(&self) -> RenderInfo {
+        let mut blocks = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
+        let controlled_positions = self.controlled_blocks.positions();
+
+        for y in 0..field::VISIBLE_HEIGHT {
+            for x in 0..field::WIDTH {
+                let pos = p(x, y);
+                let block_type = match self.field.at(pos) {
+                    FieldBlock::Empty => {
+                        if controlled_positions.contains(&pos) {
+                            DrawBlockType::Controlled
+                        } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
+                            DrawBlockType::OutOfPlay
+                        } else {
+                            DrawBlockType::Empty
+                        }
+                    }
+                    FieldBlock::Occupied => DrawBlockType::Occupied,
+                };
+
+                blocks.push(RenderBlockInfo {
+                    pos: pos,
+                    block_type: block_type,
+                });
             }
-            FieldBlock::Occupied => DrawBlockType::Occupied,
         }
+        RenderInfo { field: blocks }
     }
 
     fn handle_drop(&mut self, drop_result: DropResult) {

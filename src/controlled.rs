@@ -42,15 +42,6 @@ impl<TShape: ShapeDef> ControlledBlocksImpl<TShape> {
         self.root_pos + self.shape.positions(rot)
     }
 
-    pub fn is_controlled(&self, target: Pos) -> bool {
-        for pos in self.positions().iter() {
-            if *pos == target {
-                return true;
-            }
-        }
-        return false;
-    }
-
     pub fn shift(&mut self, field: &CheckField, dir: ShiftDir) {
         // Don't move if it's not legal
         for pos in self.positions().iter() {
@@ -116,6 +107,7 @@ mod tests {
     use super::*;
     use crate::position::RelativePoses;
     use crate::time::GameClock;
+    use hamcrest2::prelude::*;
 
     struct TestShape;
     impl ShapeDef for TestShape {
@@ -133,10 +125,9 @@ mod tests {
     }
 
     #[test]
-    fn controlled() {
+    fn positions() {
         let b = blocks();
-        assert_eq!(true, b.is_controlled(start_pos()));
-        assert_eq!(false, b.is_controlled(p(0, 0)));
+        assert_position(&b, start_pos());
     }
 
     #[test]
@@ -152,8 +143,7 @@ mod tests {
         b.shift(&mock_field, ShiftDir::Right);
 
         // Asset I shifted only once
-        assert_eq!(false, b.is_controlled(start_pos()));
-        assert_eq!(true, b.is_controlled(start_pos() + ShiftDir::Right));
+        assert_position(&b, start_pos() + ShiftDir::Right);
     }
 
     #[test]
@@ -166,13 +156,20 @@ mod tests {
         let mut b = ControlledBlocksImpl::new(start_time, TestShape {});
 
         b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(10));
-        assert_eq!(true, b.is_controlled(start_pos()));
+        assert_position(&b, start_pos());
 
         b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(1010));
-        assert_eq!(false, b.is_controlled(start_pos()));
+        assert_position(&b, start_pos() + p(0, -1));
     }
 
     fn blocks() -> ControlledBlocksImpl<TestShape> {
         ControlledBlocksImpl::new(GameClock::new().now(), TestShape {})
+    }
+
+    fn assert_position(b: &ControlledBlocksImpl<TestShape>, pos: Pos) {
+        assert_that!(
+            &b.positions().to_vec(),
+            contains([pos; 4].to_vec()).exactly()
+        );
     }
 }

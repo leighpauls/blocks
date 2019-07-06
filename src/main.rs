@@ -1,6 +1,11 @@
 #[cfg(test)]
 #[macro_use]
 extern crate double;
+
+#[cfg(test)]
+#[macro_use]
+extern crate hamcrest2;
+
 extern crate quicksilver;
 #[macro_use]
 extern crate num_derive;
@@ -15,7 +20,7 @@ mod shapes;
 mod time;
 
 use gamestate::{DrawBlockType, GameState};
-use position::{Pos, RotateDir, ShiftDir};
+use position::{RotateDir, ShiftDir};
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::Color,
@@ -63,27 +68,25 @@ impl State for Game {
             screen_size.x * 0.5 - (0.5 * block_size * field::WIDTH as f32),
             screen_size.y * 0.5 - (0.5 * block_size * field::VISIBLE_HEIGHT as f32),
         ));
-        let game_state = self.game_state();
-        for y in 0..field::VISIBLE_HEIGHT {
-            for x in 0..field::WIDTH {
-                window.draw_ex(
-                    &Rectangle::new(
-                        (
-                            block_size * x as f32,
-                            block_size * (field::VISIBLE_HEIGHT - y - 1) as f32,
-                        ),
-                        (block_size, block_size),
+
+        for block in self.game_state().render_block_info().field.iter() {
+            window.draw_ex(
+                &Rectangle::new(
+                    (
+                        block_size * block.pos.x as f32,
+                        block_size * (field::VISIBLE_HEIGHT - block.pos.y - 1) as f32,
                     ),
-                    match game_state.draw_block_type_at(Pos::new(x, y)) {
-                        DrawBlockType::Empty => Color::BLUE,
-                        DrawBlockType::Controlled => Color::GREEN,
-                        DrawBlockType::Occupied => Color::RED,
-                        DrawBlockType::OutOfPlay => Color::YELLOW,
-                    },
-                    field_transform,
-                    0,
-                );
-            }
+                    (block_size, block_size),
+                ),
+                match block.block_type {
+                    DrawBlockType::Empty => Color::BLUE,
+                    DrawBlockType::Controlled => Color::GREEN,
+                    DrawBlockType::Occupied => Color::RED,
+                    DrawBlockType::OutOfPlay => Color::YELLOW,
+                },
+                field_transform,
+                0,
+            );
         }
         Ok(())
     }
