@@ -51,6 +51,17 @@ impl<TShape: ShapeDef> ControlledBlocksImpl<TShape> {
         self.root_pos + self.shape.positions(rot)
     }
 
+    pub fn ghost_positions(&self, field: &CheckField) -> [Pos; 4] {
+        let mut result = self.positions();
+        loop {
+            let next_positions = p(0, -1) + result;
+            if !field.are_open(&next_positions) {
+                return result;
+            }
+            result = next_positions;
+        }
+    }
+
     pub fn shift(&mut self, field: &CheckField, dir: ShiftDir) {
         // Don't move if it's not legal
         let new_positions = (self.root_pos + dir) + self.shape.positions(self.rotation);
@@ -134,6 +145,18 @@ mod tests {
     }
 
     #[test]
+    fn ghost_positions() {
+        let mock_field = MockCheckField::default();
+        mock_field
+            .is_open
+            .return_value_for(start_pos() + p(0, -5), false);
+        mock_field.is_open.return_value(true);
+
+        let b = blocks();
+        assert_poses(&b.ghost_positions(&mock_field), start_pos() + p(0, -4));
+    }
+
+    #[test]
     fn shift() {
         let mock_field = MockCheckField::default();
         mock_field
@@ -170,9 +193,9 @@ mod tests {
     }
 
     fn assert_position(b: &ControlledBlocksImpl<TestShape>, pos: Pos) {
-        assert_that!(
-            &b.positions().to_vec(),
-            contains([pos; 4].to_vec()).exactly()
-        );
+        assert_poses(&b.positions(), pos);
+    }
+    fn assert_poses(poses: &[Pos; 4], pos: Pos) {
+        assert_that!(&poses.to_vec(), contains([pos; 4].to_vec()).exactly());
     }
 }
