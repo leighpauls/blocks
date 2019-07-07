@@ -29,11 +29,11 @@ impl ControlledBlocks {
         }
     }
 
-    pub fn positions(&self) -> MinoSet {
+    pub fn minos(&self) -> MinoSet {
         self.tetromino.to_minos()
     }
 
-    pub fn ghost_positions(&self, field: &CheckField) -> MinoSet {
+    pub fn ghost_minos(&self, field: &CheckField) -> MinoSet {
         self.tetromino.hard_drop(field).to_minos()
     }
 
@@ -76,7 +76,6 @@ impl ControlledBlocks {
 mod tests {
     use super::*;
     use crate::time::GameClock;
-    use hamcrest2::prelude::*;
 
     mock_trait!(MockCheckField, is_open(Pos) -> bool);
     impl CheckField for MockCheckField {

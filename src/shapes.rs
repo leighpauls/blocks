@@ -1,14 +1,31 @@
+use crate::field::{Field, FieldBlock};
 use crate::position::{p, Pos, RotateDir, Rotations};
+use crate::tetromino::CheckField;
 use num_traits::FromPrimitive;
 use rand::random;
 
 pub struct MinoSet {
-    pub minos: [Pos; 4],
+    minos: [Pos; 4],
 }
 
 impl MinoSet {
     pub fn contains(&self, p: Pos) -> bool {
         self.minos.contains(&p)
+    }
+
+    pub fn apply_to_field(&self, field: &mut Field) {
+        for mino in self.minos.iter() {
+            field.set(*mino, FieldBlock::Occupied);
+        }
+    }
+
+    pub fn is_valid(&self, field: &CheckField) -> bool {
+        for mino in self.minos.iter() {
+            if !field.is_open(*mino) {
+                return false;
+            }
+        }
+        true
     }
 }
 

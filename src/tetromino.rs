@@ -10,15 +10,6 @@ pub struct Tetromino {
 
 pub trait CheckField {
     fn is_open(&self, pos: Pos) -> bool;
-
-    fn are_open(&self, positions: &[Pos; 4]) -> bool {
-        for p in positions.iter() {
-            if !self.is_open(*p) {
-                return false;
-            }
-        }
-        true
-    }
 }
 
 impl Tetromino {
@@ -71,7 +62,7 @@ impl Tetromino {
                 ..*self
             };
 
-            if !field.are_open(&new.to_minos().minos) {
+            if !new.to_minos().is_valid(field) {
                 continue 'kick;
             }
             return Some(new);
@@ -80,7 +71,7 @@ impl Tetromino {
     }
 
     fn if_valid(self, field: &CheckField) -> Option<Self> {
-        if field.are_open(&self.to_minos().minos) {
+        if self.to_minos().is_valid(field) {
             Some(self)
         } else {
             None

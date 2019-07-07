@@ -62,17 +62,17 @@ impl GameState {
 
     pub fn render_block_info(&self) -> RenderInfo {
         let mut blocks = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
-        let controlled_positions = self.controlled_blocks.positions();
-        let ghost_positions = self.controlled_blocks.ghost_positions(&self.field);
+        let controlled_minos = self.controlled_blocks.minos();
+        let ghost_minos = self.controlled_blocks.ghost_minos(&self.field);
 
         for y in 0..field::VISIBLE_HEIGHT {
             for x in 0..field::WIDTH {
                 let pos = p(x, y);
                 let block_type = match self.field.at(pos) {
                     FieldBlock::Empty => {
-                        if controlled_positions.contains(pos) {
+                        if controlled_minos.contains(pos) {
                             DrawBlockType::Controlled
-                        } else if ghost_positions.contains(pos) {
+                        } else if ghost_minos.contains(pos) {
                             DrawBlockType::GhostPiece
                         } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
                             DrawBlockType::OutOfPlay
@@ -97,9 +97,7 @@ impl GameState {
             // These blocks are still dropping
             return;
         }
-        for pos in self.controlled_blocks.positions().minos.iter() {
-            self.field.set(*pos, FieldBlock::Occupied);
-        }
+        self.controlled_blocks.minos().apply_to_field(&mut self.field);
 
         // Replace the stopped blocks with new ones
         self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::random());
