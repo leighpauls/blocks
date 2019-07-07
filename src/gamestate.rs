@@ -108,6 +108,8 @@ impl GameState {
             .minos()
             .apply_to_field(&mut self.field);
 
+        self.field.remove_lines();
+
         // Replace the stopped blocks with new ones
         self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::random());
     }
