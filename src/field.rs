@@ -1,4 +1,4 @@
-use crate::controlled::CheckField;
+use crate::tetromino::CheckField;
 use crate::position::{Coord, Pos};
 
 pub const WIDTH: Coord = 10;

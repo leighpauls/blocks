@@ -18,6 +18,7 @@ mod gamestate;
 mod position;
 mod shapes;
 mod time;
+mod tetromino;
 
 use gamestate::{DrawBlockType, GameState};
 use position::{RotateDir, ShiftDir};

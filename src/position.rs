@@ -30,8 +30,6 @@ pub enum RotateDir {
     CCW,
 }
 
-pub type RelativePoses = [Pos; 4];
-
 pub fn p<T: Into<Coord>>(x: T, y: T) -> Pos {
     Pos::new(x, y)
 }
@@ -66,18 +64,6 @@ impl Add<ShiftDir> for Pos {
     }
 }
 
-impl Add<RelativePoses> for Pos {
-    type Output = RelativePoses;
-    fn add(self, other: RelativePoses) -> RelativePoses {
-        [
-            other[0] + self,
-            other[1] + self,
-            other[2] + self,
-            other[3] + self,
-        ]
-    }
-}
-
 impl Add<RotateDir> for Rotations {
     type Output = Self;
     fn add(self, other: RotateDir) -> Self {
@@ -103,14 +89,6 @@ mod tests {
     fn shift_pos() {
         assert_eq!(p(4, 8) + ShiftDir::Left, p(3, 8));
         assert_eq!(p(4, 8) + ShiftDir::Right, p(5, 8));
-    }
-
-    #[test]
-    fn add_relative_poses() {
-        let start: RelativePoses = [p(0, 0), p(1, 1), p(2, 2), p(3, 3)];
-        let expected: RelativePoses = [p(1, 1), p(2, 2), p(3, 3), p(4, 4)];
-
-        assert_eq!(expected, p(1, 1) + start);
     }
 
     #[test]

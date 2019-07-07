@@ -70,9 +70,9 @@ impl GameState {
                 let pos = p(x, y);
                 let block_type = match self.field.at(pos) {
                     FieldBlock::Empty => {
-                        if controlled_positions.contains(&pos) {
+                        if controlled_positions.contains(pos) {
                             DrawBlockType::Controlled
-                        } else if ghost_positions.contains(&pos) {
+                        } else if ghost_positions.contains(pos) {
                             DrawBlockType::GhostPiece
                         } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
                             DrawBlockType::OutOfPlay
@@ -97,7 +97,7 @@ impl GameState {
             // These blocks are still dropping
             return;
         }
-        for pos in self.controlled_blocks.positions().iter() {
+        for pos in self.controlled_blocks.positions().minos.iter() {
             self.field.set(*pos, FieldBlock::Occupied);
         }
 
