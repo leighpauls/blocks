@@ -49,6 +49,10 @@ impl ControlledBlocks {
         }
     }
 
+    pub fn hard_drop(&mut self, field: &CheckField) {
+        self.tetromino = self.tetromino.hard_drop(field);
+    }
+
     pub fn maybe_periodic_drop(&mut self, field: &CheckField, now: GameTime) -> DropResult {
         if self.next_drop_time > now {
             return DropResult::Continue;

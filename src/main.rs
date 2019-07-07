@@ -17,8 +17,8 @@ mod field;
 mod gamestate;
 mod position;
 mod shapes;
-mod time;
 mod tetromino;
+mod time;
 
 use gamestate::{DrawBlockType, GameState};
 use position::{RotateDir, ShiftDir};
@@ -114,6 +114,7 @@ impl State for Game {
             Event::Key(Key::Down, ButtonState::Pressed) => game_state.on_input_soft_drop(),
             Event::Key(Key::Z, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CCW),
             Event::Key(Key::X, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CW),
+            Event::Key(Key::Space, ButtonState::Pressed) => game_state.on_input_hard_drop(),
             Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),
             _ => (),
         }

@@ -42,7 +42,7 @@ impl GameState {
         let drop_result = self
             .controlled_blocks
             .maybe_periodic_drop(&self.field, self.clock.now());
-        self.handle_drop(drop_result);
+        self.handle_soft_drop(drop_result);
     }
 
     pub fn on_input_shift(&mut self, dir: ShiftDir) {
@@ -53,11 +53,16 @@ impl GameState {
         let drop_result = self
             .controlled_blocks
             .manual_soft_drop(&self.field, self.clock.now());
-        self.handle_drop(drop_result)
+        self.handle_soft_drop(drop_result)
     }
 
     pub fn on_input_rotate(&mut self, dir: RotateDir) {
         self.controlled_blocks.rotate(&self.field, dir);
+    }
+
+    pub fn on_input_hard_drop(&mut self) {
+        self.controlled_blocks.hard_drop(&self.field);
+        self.replace_controlled_piece();
     }
 
     pub fn render_block_info(&self) -> RenderInfo {
@@ -92,12 +97,16 @@ impl GameState {
         RenderInfo { field: blocks }
     }
 
-    fn handle_drop(&mut self, drop_result: DropResult) {
-        if let DropResult::Continue = drop_result {
-            // These blocks are still dropping
-            return;
+    fn handle_soft_drop(&mut self, drop_result: DropResult) {
+        if let DropResult::Stop = drop_result {
+            self.replace_controlled_piece();
         }
-        self.controlled_blocks.minos().apply_to_field(&mut self.field);
+    }
+
+    fn replace_controlled_piece(&mut self) {
+        self.controlled_blocks
+            .minos()
+            .apply_to_field(&mut self.field);
 
         // Replace the stopped blocks with new ones
         self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::random());
