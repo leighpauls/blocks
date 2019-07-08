@@ -1,7 +1,7 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{self, Field, FieldBlock};
 use crate::position::{p, Pos, RotateDir, ShiftDir};
-use crate::shapes::Shape;
+use crate::shapes::{MinoSet, Shape};
 use crate::time::GameClock;
 
 pub struct GameState {
@@ -65,36 +65,16 @@ impl GameState {
         self.replace_controlled_piece();
     }
 
-    pub fn render_block_info(&self) -> RenderInfo {
-        let mut blocks = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
-        let controlled_minos = self.controlled_blocks.minos();
-        let ghost_minos = self.controlled_blocks.ghost_minos(&self.field);
+    pub fn render_info(&self) -> RenderInfo {
+        let playing_field = render_blocks_for_field(
+            &self.field,
+            &self.controlled_blocks.minos(),
+            &self.controlled_blocks.ghost_minos(&self.field),
+        );
 
-        for y in 0..field::VISIBLE_HEIGHT {
-            for x in 0..field::WIDTH {
-                let pos = p(x, y);
-                let block_type = match self.field.at(pos) {
-                    FieldBlock::Empty => {
-                        if controlled_minos.contains(pos) {
-                            DrawBlockType::Controlled
-                        } else if ghost_minos.contains(pos) {
-                            DrawBlockType::GhostPiece
-                        } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
-                            DrawBlockType::OutOfPlay
-                        } else {
-                            DrawBlockType::Empty
-                        }
-                    }
-                    FieldBlock::Occupied => DrawBlockType::Occupied,
-                };
-
-                blocks.push(RenderBlockInfo {
-                    pos: pos,
-                    block_type: block_type,
-                });
-            }
+        RenderInfo {
+            field: playing_field,
         }
-        RenderInfo { field: blocks }
     }
 
     fn handle_soft_drop(&mut self, drop_result: DropResult) {
@@ -113,4 +93,38 @@ impl GameState {
         // Replace the stopped blocks with new ones
         self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::random());
     }
+}
+
+fn render_blocks_for_field(
+    field: &Field,
+    controlled_minos: &MinoSet,
+    ghost_minos: &MinoSet,
+) -> Vec<RenderBlockInfo> {
+    let mut playing_field = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
+
+    for y in 0..field::VISIBLE_HEIGHT {
+        for x in 0..field::WIDTH {
+            let pos = p(x, y);
+            let block_type = match field.at(pos) {
+                FieldBlock::Empty => {
+                    if controlled_minos.contains(pos) {
+                        DrawBlockType::Controlled
+                    } else if ghost_minos.contains(pos) {
+                        DrawBlockType::GhostPiece
+                    } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
+                        DrawBlockType::OutOfPlay
+                    } else {
+                        DrawBlockType::Empty
+                    }
+                }
+                FieldBlock::Occupied => DrawBlockType::Occupied,
+            };
+
+            playing_field.push(RenderBlockInfo {
+                pos: pos,
+                block_type: block_type,
+            });
+        }
+    }
+    playing_field
 }

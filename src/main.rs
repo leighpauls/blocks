@@ -70,7 +70,9 @@ impl State for Game {
             screen_size.y * 0.5 - (0.5 * block_size * field::VISIBLE_HEIGHT as f32),
         ));
 
-        for block in self.game_state().render_block_info().field.iter() {
+        let render_info = self.game_state().render_info();
+
+        for block in render_info.field.iter() {
             window.draw_ex(
                 &Rectangle::new(
                     (
@@ -90,6 +92,7 @@ impl State for Game {
                 0,
             );
         }
+
         Ok(())
     }
 
