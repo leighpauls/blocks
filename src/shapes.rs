@@ -1,6 +1,5 @@
-use crate::field::{Field, FieldBlock};
+use crate::field::{Field, FieldBlock, CheckableField};
 use crate::position::{p, Pos, RotateDir, Rotations};
-use crate::tetromino::CheckField;
 use num_traits::FromPrimitive;
 use rand::random;
 
@@ -19,7 +18,7 @@ impl MinoSet {
         }
     }
 
-    pub fn is_valid(&self, field: &CheckField) -> bool {
+    pub fn is_valid(&self, field: &CheckableField) -> bool {
         for mino in self.minos.iter() {
             if !field.is_open(*mino) {
                 return false;

@@ -1,5 +1,4 @@
 use crate::position::{Coord, Pos};
-use crate::tetromino::CheckField;
 
 pub const WIDTH: Coord = 10;
 pub const GAME_HEIGHT: Coord = 40;
@@ -14,6 +13,10 @@ pub enum FieldBlock {
 
 pub struct Field {
     blocks: [[FieldBlock; GAME_HEIGHT as usize]; WIDTH as usize],
+}
+
+pub trait CheckableField {
+    fn is_open(&self, pos: Pos) -> bool;
 }
 
 impl Field {
@@ -55,7 +58,7 @@ impl Field {
     }
 }
 
-impl CheckField for Field {
+impl CheckableField for Field {
     fn is_open(&self, pos: Pos) -> bool {
         pos.x >= 0
             && pos.x < WIDTH

@@ -1,7 +1,7 @@
-use crate::field;
+use crate::field::{self, CheckableField};
 use crate::position::{p, Pos, RotateDir, ShiftDir};
 use crate::shapes::{MinoSet, Shape};
-use crate::tetromino::{CheckField, Tetromino};
+use crate::tetromino::Tetromino;
 use crate::time::GameTime;
 use std::time::Duration;
 
@@ -33,27 +33,27 @@ impl ControlledBlocks {
         self.tetromino.to_minos()
     }
 
-    pub fn ghost_minos(&self, field: &CheckField) -> MinoSet {
+    pub fn ghost_minos(&self, field: &CheckableField) -> MinoSet {
         self.tetromino.hard_drop(field).to_minos()
     }
 
-    pub fn shift(&mut self, field: &CheckField, dir: ShiftDir) {
+    pub fn shift(&mut self, field: &CheckableField, dir: ShiftDir) {
         if let Some(new) = self.tetromino.try_shift(dir, field) {
             self.tetromino = new;
         }
     }
 
-    pub fn rotate(&mut self, field: &CheckField, dir: RotateDir) {
+    pub fn rotate(&mut self, field: &CheckableField, dir: RotateDir) {
         if let Some(new) = self.tetromino.try_rotate(dir, field) {
             self.tetromino = new;
         }
     }
 
-    pub fn hard_drop(&mut self, field: &CheckField) {
+    pub fn hard_drop(&mut self, field: &CheckableField) {
         self.tetromino = self.tetromino.hard_drop(field);
     }
 
-    pub fn maybe_periodic_drop(&mut self, field: &CheckField, now: GameTime) -> DropResult {
+    pub fn maybe_periodic_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
         if self.next_drop_time > now {
             return DropResult::Continue;
         }
@@ -61,12 +61,12 @@ impl ControlledBlocks {
         self.soft_drop(field)
     }
 
-    pub fn manual_soft_drop(&mut self, field: &CheckField, now: GameTime) -> DropResult {
+    pub fn manual_soft_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
         self.next_drop_time = now + DROP_PERIOD;
         self.soft_drop(field)
     }
 
-    fn soft_drop(&mut self, field: &CheckField) -> DropResult {
+    fn soft_drop(&mut self, field: &CheckableField) -> DropResult {
         if let Some(new) = self.tetromino.try_down(field) {
             self.tetromino = new;
             DropResult::Continue
@@ -81,14 +81,14 @@ mod tests {
     use super::*;
     use crate::time::GameClock;
 
-    mock_trait!(MockCheckField, is_open(Pos) -> bool);
-    impl CheckField for MockCheckField {
+    mock_trait!(MockCheckableField, is_open(Pos) -> bool);
+    impl CheckableField for MockCheckableField {
         mock_method!(is_open(&self, pos: Pos) -> bool);
     }
 
     #[test]
     fn periodic_drop() {
-        let mock_field = MockCheckField::default();
+        let mock_field = MockCheckableField::default();
         mock_field.is_open.return_value(true);
 
         let clock = GameClock::new();
