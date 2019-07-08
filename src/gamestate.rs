@@ -1,6 +1,6 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{self, Field, FieldBlock};
-use crate::position::{p, Pos, RotateDir, ShiftDir};
+use crate::position::{Pos, RotateDir, ShiftDir};
 use crate::shapes::{MinoSet, Shape};
 use crate::time::GameClock;
 
@@ -102,29 +102,26 @@ fn render_blocks_for_field(
 ) -> Vec<RenderBlockInfo> {
     let mut playing_field = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
 
-    for y in 0..field::VISIBLE_HEIGHT {
-        for x in 0..field::WIDTH {
-            let pos = p(x, y);
-            let block_type = match field.at(pos) {
-                FieldBlock::Empty => {
-                    if controlled_minos.contains(pos) {
-                        DrawBlockType::Controlled
-                    } else if ghost_minos.contains(pos) {
-                        DrawBlockType::GhostPiece
-                    } else if pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
-                        DrawBlockType::OutOfPlay
-                    } else {
-                        DrawBlockType::Empty
-                    }
+    for b in field.iter() {
+        let block_type = match b.state {
+            FieldBlock::Empty => {
+                if controlled_minos.contains(b.pos) {
+                    DrawBlockType::Controlled
+                } else if ghost_minos.contains(b.pos) {
+                    DrawBlockType::GhostPiece
+                } else if b.pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
+                    DrawBlockType::OutOfPlay
+                } else {
+                    DrawBlockType::Empty
                 }
-                FieldBlock::Occupied => DrawBlockType::Occupied,
-            };
+            }
+            FieldBlock::Occupied => DrawBlockType::Occupied,
+        };
 
-            playing_field.push(RenderBlockInfo {
-                pos: pos,
-                block_type: block_type,
-            });
-        }
+        playing_field.push(RenderBlockInfo {
+            pos: b.pos,
+            block_type: block_type,
+        });
     }
     playing_field
 }

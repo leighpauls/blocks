@@ -1,4 +1,4 @@
-use crate::position::{Coord, Pos};
+use crate::position::{p, Coord, Pos};
 
 pub const WIDTH: Coord = 10;
 pub const GAME_HEIGHT: Coord = 40;
@@ -19,15 +19,64 @@ pub trait CheckableField {
     fn is_open(&self, pos: Pos) -> bool;
 }
 
+pub struct VisibleBlock {
+    pub pos: Pos,
+    pub state: FieldBlock,
+}
+
+pub trait IterableField {
+    const WIDTH: Coord;
+    const VISIBLE_HEIGHT: Coord;
+
+    fn at(&self, pos: Pos) -> FieldBlock;
+}
+
+pub struct FieldIter<'a, T: IterableField> {
+    field: &'a T,
+    next_pos: Pos,
+}
+
+impl<'a, T: IterableField> Iterator for FieldIter<'a, T> {
+    type Item = VisibleBlock;
+
+    fn next(&mut self) -> Option<VisibleBlock> {
+        if self.next_pos.y >= T::VISIBLE_HEIGHT {
+            return None;
+        }
+        let result = Some(VisibleBlock {
+            pos: self.next_pos,
+            state: self.field.at(self.next_pos),
+        });
+
+        self.next_pos = self.next_pos + p(1, 0);
+        if self.next_pos.x >= T::WIDTH {
+            self.next_pos = p(0, self.next_pos.y + 1);
+        }
+        result
+    }
+}
+
+impl IterableField for Field {
+    fn at(&self, pos: Pos) -> FieldBlock {
+        self.blocks[pos.x as usize][pos.y as usize]
+    }
+
+    const WIDTH: Coord = WIDTH;
+    const VISIBLE_HEIGHT: Coord = VISIBLE_HEIGHT;
+}
+
 impl Field {
+    pub fn iter<'a>(&'a self) -> FieldIter<'a, Self> {
+        FieldIter {
+            field: self,
+            next_pos: p(0, 0),
+        }
+    }
+
     pub fn new() -> Field {
         Field {
             blocks: [[FieldBlock::Empty; GAME_HEIGHT as usize]; WIDTH as usize],
         }
-    }
-
-    pub fn at(&self, pos: Pos) -> FieldBlock {
-        self.blocks[pos.x as usize][pos.y as usize]
     }
 
     pub fn set(&mut self, pos: Pos, value: FieldBlock) {
@@ -96,5 +145,12 @@ mod tests {
 
         assert_eq!(false, f.is_open(Pos::new(WIDTH, 0)));
         assert_eq!(false, f.is_open(Pos::new(0, GAME_HEIGHT)));
+    }
+
+    #[test]
+    fn iter_field() {
+        let f = Field::new();
+        let all_blocks: Vec<VisibleBlock> = f.iter().collect();
+        assert_eq!(10 * 22, all_blocks.len());
     }
 }
