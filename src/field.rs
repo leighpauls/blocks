@@ -6,7 +6,7 @@ pub const VISIBLE_HEIGHT: Coord = 22;
 pub const PLAYING_BOUNDARY_HEIGHT: Coord = 20;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub enum FieldBlock {
+enum FieldBlock {
     Empty,
     Occupied,
 }
@@ -21,52 +21,11 @@ pub trait CheckableField {
 
 pub struct VisibleBlock {
     pub pos: Pos,
-    pub state: FieldBlock,
-}
-
-pub trait IterableField {
-    const WIDTH: Coord;
-    const VISIBLE_HEIGHT: Coord;
-
-    fn at(&self, pos: Pos) -> FieldBlock;
-}
-
-pub struct FieldIter<'a, T: IterableField> {
-    field: &'a T,
-    next_pos: Pos,
-}
-
-impl<'a, T: IterableField> Iterator for FieldIter<'a, T> {
-    type Item = VisibleBlock;
-
-    fn next(&mut self) -> Option<VisibleBlock> {
-        if self.next_pos.y >= T::VISIBLE_HEIGHT {
-            return None;
-        }
-        let result = Some(VisibleBlock {
-            pos: self.next_pos,
-            state: self.field.at(self.next_pos),
-        });
-
-        self.next_pos = self.next_pos + p(1, 0);
-        if self.next_pos.x >= T::WIDTH {
-            self.next_pos = p(0, self.next_pos.y + 1);
-        }
-        result
-    }
-}
-
-impl IterableField for Field {
-    fn at(&self, pos: Pos) -> FieldBlock {
-        self.blocks[pos.x as usize][pos.y as usize]
-    }
-
-    const WIDTH: Coord = WIDTH;
-    const VISIBLE_HEIGHT: Coord = VISIBLE_HEIGHT;
+    pub is_occupied: bool,
 }
 
 impl Field {
-    pub fn iter<'a>(&'a self) -> FieldIter<'a, Self> {
+    pub fn iter(&self) -> impl Iterator<Item = VisibleBlock> + '_ {
         FieldIter {
             field: self,
             next_pos: p(0, 0),
@@ -79,8 +38,8 @@ impl Field {
         }
     }
 
-    pub fn set(&mut self, pos: Pos, value: FieldBlock) {
-        self.blocks[pos.x as usize][pos.y as usize] = value;
+    pub fn occupy(&mut self, pos: Pos) {
+        self.blocks[pos.x as usize][pos.y as usize] = FieldBlock::Occupied;
     }
 
     pub fn remove_lines(&mut self) {
@@ -117,6 +76,47 @@ impl CheckableField for Field {
     }
 }
 
+trait IterableField {
+    const WIDTH: Coord;
+    const VISIBLE_HEIGHT: Coord;
+
+    fn at(&self, pos: Pos) -> FieldBlock;
+}
+
+struct FieldIter<'a, T: IterableField> {
+    field: &'a T,
+    next_pos: Pos,
+}
+
+impl<'a, T: IterableField> Iterator for FieldIter<'a, T> {
+    type Item = VisibleBlock;
+
+    fn next(&mut self) -> Option<VisibleBlock> {
+        if self.next_pos.y >= T::VISIBLE_HEIGHT {
+            return None;
+        }
+        let result = Some(VisibleBlock {
+            pos: self.next_pos,
+            is_occupied: self.field.at(self.next_pos) == FieldBlock::Occupied,
+        });
+
+        self.next_pos = self.next_pos + p(1, 0);
+        if self.next_pos.x >= T::WIDTH {
+            self.next_pos = p(0, self.next_pos.y + 1);
+        }
+        result
+    }
+}
+
+impl IterableField for Field {
+    fn at(&self, pos: Pos) -> FieldBlock {
+        self.blocks[pos.x as usize][pos.y as usize]
+    }
+
+    const WIDTH: Coord = WIDTH;
+    const VISIBLE_HEIGHT: Coord = VISIBLE_HEIGHT;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn set_and_at() {
         let mut f = Field::new();
-        f.set(Pos::new(2, 3), FieldBlock::Occupied);
+        f.occupy(Pos::new(2, 3));
 
         assert_eq!(f.at(Pos::new(1, 1)), FieldBlock::Empty);
         assert_eq!(f.at(Pos::new(2, 3)), FieldBlock::Occupied);
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn is_open() {
         let mut f = Field::new();
-        f.set(Pos::new(2, 3), FieldBlock::Occupied);
+        f.occupy(Pos::new(2, 3));
 
         assert_eq!(true, f.is_open(Pos::new(0, 0)));
 

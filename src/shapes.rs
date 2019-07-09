@@ -1,4 +1,4 @@
-use crate::field::{Field, FieldBlock, CheckableField};
+use crate::field::{CheckableField, Field};
 use crate::position::{p, Pos, RotateDir, Rotations};
 use num_traits::FromPrimitive;
 use rand::random;
@@ -14,7 +14,7 @@ impl MinoSet {
 
     pub fn apply_to_field(&self, field: &mut Field) {
         for mino in self.minos.iter() {
-            field.set(*mino, FieldBlock::Occupied);
+            field.occupy(*mino);
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::controlled::{ControlledBlocks, DropResult};
-use crate::field::{self, Field, FieldBlock};
+use crate::field::{self, Field};
 use crate::position::{Pos, RotateDir, ShiftDir};
 use crate::shapes::{MinoSet, Shape};
 use crate::time::GameClock;
@@ -103,19 +103,16 @@ fn render_blocks_for_field(
     let mut playing_field = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
 
     for b in field.iter() {
-        let block_type = match b.state {
-            FieldBlock::Empty => {
-                if controlled_minos.contains(b.pos) {
-                    DrawBlockType::Controlled
-                } else if ghost_minos.contains(b.pos) {
-                    DrawBlockType::GhostPiece
-                } else if b.pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
-                    DrawBlockType::OutOfPlay
-                } else {
-                    DrawBlockType::Empty
-                }
-            }
-            FieldBlock::Occupied => DrawBlockType::Occupied,
+        let block_type = if controlled_minos.contains(b.pos) {
+            DrawBlockType::Controlled
+        } else if ghost_minos.contains(b.pos) {
+            DrawBlockType::GhostPiece
+        } else if b.pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
+            DrawBlockType::OutOfPlay
+        } else if b.is_occupied {
+            DrawBlockType::Occupied
+        } else {
+            DrawBlockType::Empty
         };
 
         playing_field.push(RenderBlockInfo {
