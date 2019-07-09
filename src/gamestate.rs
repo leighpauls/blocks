@@ -102,7 +102,7 @@ fn render_blocks_for_field(
 ) -> Vec<RenderBlockInfo> {
     let mut playing_field = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
 
-    for b in field.iter() {
+    for b in field {
         let block_type = if controlled_minos.contains(b.pos) {
             DrawBlockType::Controlled
         } else if ghost_minos.contains(b.pos) {
