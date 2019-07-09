@@ -65,14 +65,14 @@ impl State for Game {
         let full_height = screen_size.y;
         let block_size = BLOCK_SIZE_RATIO * full_height;
 
-        let field_transform = Transform::translate((
-            screen_size.x * 0.5 - (0.5 * block_size * field::WIDTH as f32),
-            screen_size.y * 0.5 - (0.5 * block_size * field::VISIBLE_HEIGHT as f32),
-        ));
-
         let render_info = self.game_state().render_info();
 
-        for block in render_info.field.iter() {
+        let field_transform = Transform::translate((
+            screen_size.x * 0.5 - (0.5 * block_size * render_info.field.width_blocks() as f32),
+            screen_size.y * 0.5 - (0.5 * block_size * render_info.field.height_blocks() as f32),
+        ));
+
+        for block in render_info.field {
             window.draw_ex(
                 &Rectangle::new(
                     (

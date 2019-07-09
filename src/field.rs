@@ -32,6 +32,7 @@ pub trait CheckableField {
 pub trait IterableField: CheckableField {
     const WIDTH: Coord;
     const VISIBLE_HEIGHT: Coord;
+    const PLAYING_BOUNDARY_HEIGHT: Coord;
 }
 
 impl Field {
@@ -114,6 +115,7 @@ impl<'a, T: IterableField> Iterator for FieldIter<'a, T> {
 impl IterableField for Field {
     const WIDTH: Coord = WIDTH;
     const VISIBLE_HEIGHT: Coord = VISIBLE_HEIGHT;
+    const PLAYING_BOUNDARY_HEIGHT: Coord = PLAYING_BOUNDARY_HEIGHT;
 }
 
 #[cfg(test)]

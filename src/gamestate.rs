@@ -1,6 +1,6 @@
 use crate::controlled::{ControlledBlocks, DropResult};
-use crate::field::{self, Field};
-use crate::position::{Pos, RotateDir, ShiftDir};
+use crate::field::{Field, IterableField};
+use crate::position::{p, Coord, Pos, RotateDir, ShiftDir};
 use crate::shapes::{MinoSet, Shape};
 use crate::time::GameClock;
 
@@ -23,8 +23,8 @@ pub struct RenderBlockInfo {
     pub block_type: DrawBlockType,
 }
 
-pub struct RenderInfo {
-    pub field: Vec<RenderBlockInfo>,
+pub struct RenderInfo<'a> {
+    pub field: RenderBlockIterator<'a, Field>,
 }
 
 impl GameState {
@@ -66,14 +66,12 @@ impl GameState {
     }
 
     pub fn render_info(&self) -> RenderInfo {
-        let playing_field = render_blocks_for_field(
-            &self.field,
-            &self.controlled_blocks.minos(),
-            &self.controlled_blocks.ghost_minos(&self.field),
-        );
-
         RenderInfo {
-            field: playing_field,
+            field: render_blocks_for_field(
+                &self.field,
+                self.controlled_blocks.minos(),
+                self.controlled_blocks.ghost_minos(&self.field),
+            ),
         }
     }
 
@@ -95,30 +93,61 @@ impl GameState {
     }
 }
 
-fn render_blocks_for_field(
-    field: &Field,
-    controlled_minos: &MinoSet,
-    ghost_minos: &MinoSet,
-) -> Vec<RenderBlockInfo> {
-    let mut playing_field = Vec::with_capacity((field::VISIBLE_HEIGHT * field::WIDTH) as usize);
-
-    for b in field {
-        let block_type = if controlled_minos.contains(b.pos) {
-            DrawBlockType::Controlled
-        } else if ghost_minos.contains(b.pos) {
-            DrawBlockType::GhostPiece
-        } else if b.pos.y >= field::PLAYING_BOUNDARY_HEIGHT {
-            DrawBlockType::OutOfPlay
-        } else if b.is_occupied {
-            DrawBlockType::Occupied
-        } else {
-            DrawBlockType::Empty
-        };
-
-        playing_field.push(RenderBlockInfo {
-            pos: b.pos,
-            block_type: block_type,
-        });
+fn render_blocks_for_field<'a>(
+    field: &'a Field,
+    controlled_minos: MinoSet,
+    ghost_minos: MinoSet,
+) -> RenderBlockIterator<'a, Field> {
+    RenderBlockIterator {
+        field: field,
+        controlled_minos: controlled_minos,
+        ghost_minos: ghost_minos,
+        next_pos: p(0, 0),
     }
-    playing_field
+}
+
+pub struct RenderBlockIterator<'a, TField: IterableField> {
+    field: &'a TField,
+    controlled_minos: MinoSet,
+    ghost_minos: MinoSet,
+    next_pos: Pos,
+}
+
+impl<'a, TField: IterableField> RenderBlockIterator<'a, TField> {
+    pub fn width_blocks(&self) -> Coord {
+        TField::WIDTH
+    }
+    pub fn height_blocks(&self) -> Coord {
+        TField::VISIBLE_HEIGHT
+    }
+}
+
+impl<'a, TField: IterableField> Iterator for RenderBlockIterator<'a, TField> {
+    type Item = RenderBlockInfo;
+
+    fn next(&mut self) -> Option<RenderBlockInfo> {
+        if self.next_pos.y >= TField::VISIBLE_HEIGHT {
+            return None;
+        }
+        let result = Some(RenderBlockInfo {
+            pos: self.next_pos,
+            block_type: if self.controlled_minos.contains(self.next_pos) {
+                DrawBlockType::Controlled
+            } else if self.ghost_minos.contains(self.next_pos) {
+                DrawBlockType::GhostPiece
+            } else if self.next_pos.y >= TField::PLAYING_BOUNDARY_HEIGHT {
+                DrawBlockType::OutOfPlay
+            } else if self.field.is_open(self.next_pos) {
+                DrawBlockType::Empty
+            } else {
+                DrawBlockType::Occupied
+            },
+        });
+
+        self.next_pos = self.next_pos + p(1, 0);
+        if self.next_pos.x >= TField::WIDTH {
+            self.next_pos = p(0, self.next_pos.y + 1);
+        }
+        result
+    }
 }
