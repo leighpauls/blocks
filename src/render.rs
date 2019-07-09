@@ -3,7 +3,12 @@ use crate::position::p;
 use crate::position::Coord;
 use crate::position::Pos;
 use crate::shapes::MinoSet;
-use quicksilver::prelude::{Transform, Window};
+
+use quicksilver::{
+    geom::{Rectangle, Transform, Vector},
+    graphics::Color,
+    lifecycle::Window,
+};
 
 pub enum DrawBlockType {
     Empty,
@@ -84,8 +89,27 @@ impl<'a, TField: IterableField> Iterator for RenderBlockIterator<'a, TField> {
 
 pub fn render_field<'a, T: IterableField>(
     blocks: RenderBlockIterator<'a, T>,
-    field_transform: Transform,
+    scale_transform: Transform,
+    position_transform: Transform,
     window: &mut Window,
 ) {
-
+    let height = blocks.height_blocks();
+    for block in blocks {
+        window.draw_ex(
+            &Rectangle::new(
+                position_transform
+                    * Vector::new(block.pos.x as f32, (height - block.pos.y - 1) as f32),
+                scale_transform * Vector::new(1, 1),
+            ),
+            match block.block_type {
+                DrawBlockType::Empty => Color::BLUE,
+                DrawBlockType::Controlled => Color::GREEN,
+                DrawBlockType::Occupied => Color::RED,
+                DrawBlockType::OutOfPlay => Color::YELLOW,
+                DrawBlockType::GhostPiece => Color::from_rgba(0xff, 0, 0xff, 1.0),
+            },
+            Transform::IDENTITY,
+            0,
+        );
+    }
 }

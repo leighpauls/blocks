@@ -24,13 +24,13 @@ mod time;
 use gamestate::GameState;
 use position::{RotateDir, ShiftDir};
 use quicksilver::{
-    geom::{Rectangle, Transform, Vector},
+    geom::{Transform, Vector},
     graphics::Color,
     input::{ButtonState, Key},
     lifecycle::{run, Event, Settings, State, Window},
     Result,
 };
-use render::DrawBlockType;
+use render::render_field;
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
@@ -69,31 +69,19 @@ impl State for Game {
 
         let render_info = self.game_state().render_info();
 
-        let field_transform = Transform::translate((
+        let scale_transform = Transform::scale((block_size, block_size));
+        let position_transform = Transform::translate((
             screen_size.x * 0.5 - (0.5 * block_size * render_info.field.width_blocks() as f32),
             screen_size.y * 0.5 - (0.5 * block_size * render_info.field.height_blocks() as f32),
-        ));
+        )) * scale_transform;
 
-        for block in render_info.field {
-            window.draw_ex(
-                &Rectangle::new(
-                    (
-                        block_size * block.pos.x as f32,
-                        block_size * (field::VISIBLE_HEIGHT - block.pos.y - 1) as f32,
-                    ),
-                    (block_size, block_size),
-                ),
-                match block.block_type {
-                    DrawBlockType::Empty => Color::BLUE,
-                    DrawBlockType::Controlled => Color::GREEN,
-                    DrawBlockType::Occupied => Color::RED,
-                    DrawBlockType::OutOfPlay => Color::YELLOW,
-                    DrawBlockType::GhostPiece => Color::from_rgba(0xff, 0, 0xff, 1.0),
-                },
-                field_transform,
-                0,
-            );
-        }
+        render_field(
+            render_info.field,
+            scale_transform,
+            position_transform,
+            window,
+        );
+        // let position_transform = Transform::translate((block_size, block_size)) * scale_transform;
 
         Ok(())
     }
