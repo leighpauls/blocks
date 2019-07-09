@@ -16,11 +16,12 @@ mod controlled;
 mod field;
 mod gamestate;
 mod position;
+mod render;
 mod shapes;
 mod tetromino;
 mod time;
 
-use gamestate::{DrawBlockType, GameState};
+use gamestate::GameState;
 use position::{RotateDir, ShiftDir};
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
@@ -29,6 +30,7 @@ use quicksilver::{
     lifecycle::{run, Event, Settings, State, Window},
     Result,
 };
+use render::DrawBlockType;
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 

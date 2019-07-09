@@ -1,4 +1,5 @@
 use crate::position::{p, Coord, Pos};
+use crate::render::VisibleBlock;
 
 pub const WIDTH: Coord = 10;
 pub const GAME_HEIGHT: Coord = 40;
@@ -13,11 +14,6 @@ enum FieldBlock {
 
 pub struct Field {
     blocks: [[FieldBlock; GAME_HEIGHT as usize]; WIDTH as usize],
-}
-
-pub struct VisibleBlock {
-    pub pos: Pos,
-    pub is_occupied: bool,
 }
 
 pub struct FieldIter<'a, T: IterableField> {
