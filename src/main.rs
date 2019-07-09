@@ -30,7 +30,7 @@ use quicksilver::{
     lifecycle::{run, Event, Settings, State, Window},
     Result,
 };
-use render::render_field;
+use render::{render_blocks, BlockRenderInstructions};
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
@@ -71,17 +71,18 @@ impl State for Game {
 
         let scale_transform = Transform::scale((block_size, block_size));
         let position_transform = Transform::translate((
-            screen_size.x * 0.5 - (0.5 * block_size * render_info.field.width_blocks() as f32),
-            screen_size.y * 0.5 - (0.5 * block_size * render_info.field.height_blocks() as f32),
+            screen_size.x * 0.5
+                - (0.5 * block_size * render_info.playing_field.width_blocks() as f32),
+            screen_size.y * 0.5
+                - (0.5 * block_size * render_info.playing_field.height_blocks() as f32),
         )) * scale_transform;
 
-        render_field(
-            render_info.field,
+        render_blocks(
+            &render_info.playing_field,
             scale_transform,
             position_transform,
             window,
         );
-        // let position_transform = Transform::translate((block_size, block_size)) * scale_transform;
 
         Ok(())
     }

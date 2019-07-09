@@ -3,6 +3,7 @@ use crate::position::{p, Pos, RotateDir, Rotations};
 use num_traits::FromPrimitive;
 use rand::random;
 
+#[derive(Clone)]
 pub struct MinoSet {
     minos: [Pos; 4],
 }

@@ -1,7 +1,7 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::Field;
 use crate::position::{RotateDir, ShiftDir};
-use crate::render::{RenderBlockIterator, RenderInfo};
+use crate::render::{PlayingFieldRenderBlocksInstructions, RenderInfo};
 use crate::shapes::Shape;
 use crate::time::GameClock;
 
@@ -51,7 +51,7 @@ impl GameState {
 
     pub fn render_info(&self) -> RenderInfo {
         RenderInfo {
-            field: RenderBlockIterator::new(
+            playing_field: PlayingFieldRenderBlocksInstructions::new(
                 &self.field,
                 self.controlled_blocks.minos(),
                 self.controlled_blocks.ghost_minos(&self.field),
