@@ -1,5 +1,6 @@
-use crate::position::{Coord, Pos};
-use crate::shapes::Shape;
+use crate::position::{p, Coord, Pos};
+use crate::render::{BlockRenderInstructions, DrawBlockType, RenderBlockInfo};
+use crate::shapes::{MinoSet, Shape};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum FieldBlock {
@@ -15,20 +16,18 @@ pub trait CheckableField {
     fn is_open(&self, pos: Pos) -> bool;
 }
 
+pub struct PlayingFieldRenderBlocksIterator<'a> {
+    field: &'a Field,
+    controlled_minos: MinoSet,
+    ghost_minos: MinoSet,
+    next_pos: Pos,
+}
+
 impl Field {
     pub const WIDTH: Coord = 10;
     pub const GAME_HEIGHT: Coord = 40;
     pub const VISIBLE_HEIGHT: Coord = 22;
     pub const PLAYING_BOUNDARY_HEIGHT: Coord = 20;
-
-    // TODO: remove me
-    pub fn shape_at(&self, pos: Pos) -> Shape {
-        if let FieldBlock::Occupied(shape) = self.blocks[pos.x as usize][pos.y as usize] {
-            shape
-        } else {
-            panic!("shape at empty!")
-        }
-    }
 
     pub fn new() -> Field {
         Field {
@@ -71,6 +70,74 @@ impl CheckableField for Field {
             && pos.y >= 0
             && pos.y < Self::GAME_HEIGHT
             && self.blocks[pos.x as usize][pos.y as usize] == FieldBlock::Empty
+    }
+}
+
+impl<'a> Iterator for PlayingFieldRenderBlocksIterator<'a> {
+    type Item = RenderBlockInfo;
+
+    fn next(&mut self) -> Option<RenderBlockInfo> {
+        if self.next_pos.y >= Field::VISIBLE_HEIGHT {
+            return None;
+        }
+        let pos = self.next_pos;
+        let result = Some(RenderBlockInfo {
+            pos: pos,
+            block_type: if self.controlled_minos.contains(pos) {
+                DrawBlockType::Occupied(self.controlled_minos.shape())
+            } else if self.ghost_minos.contains(pos) {
+                DrawBlockType::GhostPiece(self.ghost_minos.shape())
+            } else if pos.y >= Field::PLAYING_BOUNDARY_HEIGHT {
+                DrawBlockType::OutOfPlay
+            } else {
+                match self.field.blocks[pos.x as usize][pos.y as usize] {
+                    FieldBlock::Empty => DrawBlockType::Empty,
+                    FieldBlock::Occupied(shape) => DrawBlockType::Occupied(shape),
+                }
+            },
+        });
+
+        self.next_pos = self.next_pos + p(1, 0);
+        if self.next_pos.x >= Field::WIDTH {
+            self.next_pos = p(0, self.next_pos.y + 1);
+        }
+        result
+    }
+}
+
+pub struct PlayingFieldRenderBlocksInstructions<'a> {
+    field: &'a Field,
+    controlled_minos: MinoSet,
+    ghost_minos: MinoSet,
+}
+
+impl<'a> PlayingFieldRenderBlocksInstructions<'a> {
+    pub fn new(field: &'a Field, controlled_minos: MinoSet, ghost_minos: MinoSet) -> Self {
+        Self {
+            field: field,
+            controlled_minos: controlled_minos,
+            ghost_minos: ghost_minos,
+        }
+    }
+}
+
+impl<'a> BlockRenderInstructions<PlayingFieldRenderBlocksIterator<'a>>
+    for PlayingFieldRenderBlocksInstructions<'a>
+{
+    fn height_blocks(&self) -> Coord {
+        Field::VISIBLE_HEIGHT
+    }
+    fn width_blocks(&self) -> Coord {
+        Field::WIDTH
+    }
+
+    fn blocks(&self) -> PlayingFieldRenderBlocksIterator<'a> {
+        PlayingFieldRenderBlocksIterator::<'a> {
+            field: self.field,
+            controlled_minos: self.controlled_minos.clone(),
+            ghost_minos: self.ghost_minos.clone(),
+            next_pos: p(0, 0),
+        }
     }
 }
 

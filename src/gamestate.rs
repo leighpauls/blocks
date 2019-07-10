@@ -1,7 +1,6 @@
 use crate::controlled::{ControlledBlocks, DropResult};
-use crate::field::Field;
+use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
 use crate::position::{RotateDir, ShiftDir};
-use crate::render::{PlayingFieldRenderBlocksInstructions, RenderInfo};
 use crate::shapes::Shape;
 use crate::time::GameClock;
 
@@ -9,6 +8,10 @@ pub struct GameState {
     field: Field,
     controlled_blocks: ControlledBlocks,
     clock: GameClock,
+}
+
+pub struct RenderInfo<'a> {
+    pub playing_field: PlayingFieldRenderBlocksInstructions<'a>,
 }
 
 impl GameState {
