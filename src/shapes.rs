@@ -6,16 +6,21 @@ use rand::random;
 #[derive(Clone)]
 pub struct MinoSet {
     minos: [Pos; 4],
+    shape: Shape,
 }
 
 impl MinoSet {
+    pub fn shape(&self) -> Shape {
+        self.shape
+    }
+
     pub fn contains(&self, p: Pos) -> bool {
         self.minos.contains(&p)
     }
 
     pub fn apply_to_field(&self, field: &mut Field) {
         for mino in self.minos.iter() {
-            field.occupy(*mino);
+            field.occupy(*mino, self.shape);
         }
     }
 
@@ -36,7 +41,7 @@ pub trait ShapeDef {
 
 const NUM_SHAPES: usize = 7;
 
-#[derive(Copy, Clone, FromPrimitive, Debug)]
+#[derive(Copy, Clone, FromPrimitive, Debug, PartialEq)]
 pub enum Shape {
     I,
     O,
@@ -57,6 +62,7 @@ impl ShapeDef for Shape {
                 root_pos + p[2],
                 root_pos + p[3],
             ],
+            shape: *self,
         }
     }
 

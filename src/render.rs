@@ -2,7 +2,7 @@ use crate::field::{CheckableField, Field};
 use crate::position::p;
 use crate::position::Coord;
 use crate::position::Pos;
-use crate::shapes::MinoSet;
+use crate::shapes::{MinoSet, Shape};
 
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
@@ -12,10 +12,30 @@ use quicksilver::{
 
 pub enum DrawBlockType {
     Empty,
-    Controlled,
-    Occupied,
+    Occupied(Shape),
     OutOfPlay,
-    GhostPiece,
+    GhostPiece(Shape),
+}
+
+impl DrawBlockType {
+    pub fn color(&self) -> Color {
+        match self {
+            DrawBlockType::Empty => Color::BLACK,
+            DrawBlockType::OutOfPlay => Color::WHITE,
+            DrawBlockType::GhostPiece(shape) => DrawBlockType::Occupied(*shape)
+                .color()
+                .multiply(Color::from_rgba(0x80, 0x80, 0x80, 1.0)),
+            DrawBlockType::Occupied(shape) => match *shape {
+                Shape::I => Color::CYAN,
+                Shape::O => Color::YELLOW,
+                Shape::T => Color::PURPLE,
+                Shape::S => Color::GREEN,
+                Shape::Z => Color::RED,
+                Shape::J => Color::BLUE,
+                Shape::L => Color::ORANGE,
+            },
+        }
+    }
 }
 
 pub struct RenderBlockInfo {
@@ -56,13 +76,7 @@ pub fn render_blocks<T, I>(
                     ),
                 scale_transform * Vector::new(1, 1),
             ),
-            match block.block_type {
-                DrawBlockType::Empty => Color::BLUE,
-                DrawBlockType::Controlled => Color::GREEN,
-                DrawBlockType::Occupied => Color::RED,
-                DrawBlockType::OutOfPlay => Color::YELLOW,
-                DrawBlockType::GhostPiece => Color::from_rgba(0xff, 0, 0xff, 1.0),
-            },
+            block.block_type.color(),
             Transform::IDENTITY,
             0,
         );
@@ -86,15 +100,15 @@ impl<'a> Iterator for PlayingFieldRenderBlocksIterator<'a> {
         let result = Some(RenderBlockInfo {
             pos: self.next_pos,
             block_type: if self.controlled_minos.contains(self.next_pos) {
-                DrawBlockType::Controlled
+                DrawBlockType::Occupied(self.controlled_minos.shape())
             } else if self.ghost_minos.contains(self.next_pos) {
-                DrawBlockType::GhostPiece
+                DrawBlockType::GhostPiece(self.ghost_minos.shape())
             } else if self.next_pos.y >= Field::PLAYING_BOUNDARY_HEIGHT {
                 DrawBlockType::OutOfPlay
             } else if self.field.is_open(self.next_pos) {
                 DrawBlockType::Empty
             } else {
-                DrawBlockType::Occupied
+                DrawBlockType::Occupied(self.field.shape_at(self.next_pos))
             },
         });
 

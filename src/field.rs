@@ -1,9 +1,10 @@
 use crate::position::{Coord, Pos};
+use crate::shapes::Shape;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum FieldBlock {
     Empty,
-    Occupied,
+    Occupied(Shape),
 }
 
 pub struct Field {
@@ -20,14 +21,23 @@ impl Field {
     pub const VISIBLE_HEIGHT: Coord = 22;
     pub const PLAYING_BOUNDARY_HEIGHT: Coord = 20;
 
+    // TODO: remove me
+    pub fn shape_at(&self, pos: Pos) -> Shape {
+        if let FieldBlock::Occupied(shape) = self.blocks[pos.x as usize][pos.y as usize] {
+            shape
+        } else {
+            panic!("shape at empty!")
+        }
+    }
+
     pub fn new() -> Field {
         Field {
             blocks: [[FieldBlock::Empty; Self::GAME_HEIGHT as usize]; Self::WIDTH as usize],
         }
     }
 
-    pub fn occupy(&mut self, pos: Pos) {
-        self.blocks[pos.x as usize][pos.y as usize] = FieldBlock::Occupied;
+    pub fn occupy(&mut self, pos: Pos, shape: Shape) {
+        self.blocks[pos.x as usize][pos.y as usize] = FieldBlock::Occupied(shape);
     }
 
     pub fn remove_lines(&mut self) {
@@ -71,7 +81,7 @@ mod tests {
     #[test]
     fn set_and_at() {
         let mut f = Field::new();
-        f.occupy(Pos::new(2, 3));
+        f.occupy(Pos::new(2, 3), Shape::O);
 
         assert!(f.is_open(Pos::new(1, 1)));
         assert!(!f.is_open(Pos::new(2, 3)));
@@ -80,7 +90,7 @@ mod tests {
     #[test]
     fn is_open() {
         let mut f = Field::new();
-        f.occupy(Pos::new(2, 3));
+        f.occupy(Pos::new(2, 3), Shape::O);
 
         assert_eq!(true, f.is_open(Pos::new(0, 0)));
 
