@@ -3,10 +3,28 @@ use crate::position::{p, Pos, RotateDir, Rotations};
 use num_traits::FromPrimitive;
 use rand::random;
 
+const NUM_SHAPES: usize = 7;
+
+#[derive(Copy, Clone, FromPrimitive, Debug, PartialEq)]
+pub enum Shape {
+    I,
+    O,
+    J,
+    L,
+    S,
+    Z,
+    T,
+}
+
 #[derive(Clone)]
 pub struct MinoSet {
     minos: [Pos; 4],
     shape: Shape,
+}
+
+pub trait ShapeDef {
+    fn to_minos(&self, rotation: Rotations, root_pos: Pos) -> MinoSet;
+    fn wall_kick_offsets(&self, initial_rot: Rotations, rot_dir: RotateDir) -> Vec<Pos>;
 }
 
 impl MinoSet {
@@ -32,24 +50,6 @@ impl MinoSet {
         }
         true
     }
-}
-
-pub trait ShapeDef {
-    fn to_minos(&self, rotation: Rotations, root_pos: Pos) -> MinoSet;
-    fn wall_kick_offsets(&self, initial_rot: Rotations, rot_dir: RotateDir) -> Vec<Pos>;
-}
-
-const NUM_SHAPES: usize = 7;
-
-#[derive(Copy, Clone, FromPrimitive, Debug, PartialEq)]
-pub enum Shape {
-    I,
-    O,
-    J,
-    L,
-    S,
-    Z,
-    T,
 }
 
 impl ShapeDef for Shape {
