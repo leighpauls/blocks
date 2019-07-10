@@ -1,5 +1,7 @@
 use crate::field::{CheckableField, Field};
+use crate::position::Coord;
 use crate::position::{p, Pos, RotateDir, Rotations};
+use crate::render::{BlockRenderInstructions, DrawBlockType, RenderBlockInfo};
 use num_traits::FromPrimitive;
 use rand::random;
 
@@ -20,6 +22,11 @@ pub enum Shape {
 pub struct MinoSet {
     minos: [Pos; 4],
     shape: Shape,
+}
+
+pub struct PreviewRenderBlocksIterator {
+    minos: MinoSet,
+    i: usize,
 }
 
 pub trait ShapeDef {
@@ -150,6 +157,38 @@ impl Shape {
 impl Shape {
     pub fn random() -> Shape {
         Shape::from_usize(random::<usize>() % NUM_SHAPES).expect("Unexpected shape enum value")
+    }
+}
+
+impl BlockRenderInstructions<PreviewRenderBlocksIterator> for Shape {
+    fn blocks(&self) -> PreviewRenderBlocksIterator {
+        PreviewRenderBlocksIterator {
+            minos: self.to_minos(Rotations::Zero, p(0, 0)),
+            i: 0,
+        }
+    }
+
+    fn height_blocks(&self) -> Coord {
+        2
+    }
+    fn width_blocks(&self) -> Coord {
+        4
+    }
+}
+
+impl Iterator for PreviewRenderBlocksIterator {
+    type Item = RenderBlockInfo;
+    fn next(&mut self) -> Option<RenderBlockInfo> {
+        if self.i < 4 {
+            let result = RenderBlockInfo {
+                pos: self.minos.minos[self.i],
+                block_type: DrawBlockType::Occupied(self.minos.shape),
+            };
+            self.i += 1;
+            Some(result)
+        } else {
+            None
+        }
     }
 }
 

@@ -31,6 +31,7 @@ use quicksilver::{
     Result,
 };
 use render::{render_blocks, BlockRenderInstructions};
+use shapes::Shape;
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
@@ -83,6 +84,20 @@ impl State for Game {
             position_transform,
             window,
         );
+
+        let preview_block_size = 0.03 * full_height;
+        let preview_scale_transform = Transform::scale((preview_block_size, preview_block_size));
+        let preview_root_position =
+            Transform::translate((screen_size.x * 0.7, screen_size.y * 0.2))
+                * preview_scale_transform;
+        for i in 0..6 {
+            render_blocks(
+                &Shape::J,
+                preview_scale_transform,
+                preview_root_position * Transform::translate((0, 3 * i)),
+                window,
+            );
+        }
 
         Ok(())
     }
