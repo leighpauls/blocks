@@ -1,4 +1,4 @@
-use crate::field::{self, CheckableField};
+use crate::field::{CheckableField, Field};
 use crate::position::{p, Pos, RotateDir, ShiftDir};
 use crate::shapes::{MinoSet, Shape};
 use crate::tetromino::Tetromino;
@@ -13,7 +13,7 @@ pub struct ControlledBlocks {
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
 
 fn start_pos() -> Pos {
-    p(3, field::PLAYING_BOUNDARY_HEIGHT - 2)
+    p(3, Field::PLAYING_BOUNDARY_HEIGHT - 2)
 }
 
 pub enum DropResult {

@@ -1,4 +1,4 @@
-use crate::field::{CheckableField, Field, IterableField};
+use crate::field::{CheckableField, Field};
 use crate::position::p;
 use crate::position::Coord;
 use crate::position::Pos;
@@ -25,11 +25,6 @@ pub struct RenderBlockInfo {
 
 pub struct RenderInfo<'a> {
     pub playing_field: PlayingFieldRenderBlocksInstructions<'a>,
-}
-
-pub struct VisibleBlock {
-    pub pos: Pos,
-    pub is_occupied: bool,
 }
 
 pub trait BlockRenderInstructions<I>
