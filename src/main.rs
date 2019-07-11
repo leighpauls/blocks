@@ -99,6 +99,18 @@ impl State for Game {
             );
         }
 
+        if let Some(hold_piece) = render_info.hold_piece {
+            let hold_piece_position =
+                Transform::translate((screen_size.x * 0.22, screen_size.y * 0.25))
+                    * preview_scale_transform;
+            render_blocks(
+                &hold_piece,
+                preview_scale_transform,
+                hold_piece_position,
+                window,
+            );
+        }
+
         Ok(())
     }
 

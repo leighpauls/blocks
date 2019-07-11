@@ -17,6 +17,7 @@ pub struct GameState {
 pub struct RenderInfo<'a> {
     pub playing_field: PlayingFieldRenderBlocksInstructions<'a>,
     pub previews: Vec<Shape>,
+    pub hold_piece: Option<Shape>,
 }
 
 impl GameState {
@@ -83,6 +84,7 @@ impl GameState {
                 self.controlled_blocks.ghost_minos(&self.field),
             ),
             previews: self.random_bag.previews(),
+            hold_piece: self.hold_piece,
         }
     }
 
