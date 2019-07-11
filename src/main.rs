@@ -16,6 +16,7 @@ mod controlled;
 mod field;
 mod gamestate;
 mod position;
+mod random_bag;
 mod render;
 mod shapes;
 mod tetromino;
