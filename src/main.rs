@@ -124,6 +124,7 @@ impl State for Game {
             Event::Key(Key::Z, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CCW),
             Event::Key(Key::X, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CW),
             Event::Key(Key::Space, ButtonState::Pressed) => game_state.on_input_hard_drop(),
+            Event::Key(Key::C, ButtonState::Pressed) => game_state.on_input_hold_piece(),
             Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),
             _ => (),
         }

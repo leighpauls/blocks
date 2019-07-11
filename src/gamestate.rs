@@ -10,6 +10,8 @@ pub struct GameState {
     controlled_blocks: ControlledBlocks,
     clock: GameClock,
     random_bag: RandomBag,
+    hold_piece: Option<Shape>,
+    can_hold: bool,
 }
 
 pub struct RenderInfo<'a> {
@@ -28,6 +30,8 @@ impl GameState {
             controlled_blocks: ControlledBlocks::new(now, rb.take_next()),
             clock: clock,
             random_bag: rb,
+            hold_piece: None,
+            can_hold: true,
         }
     }
 
@@ -58,6 +62,19 @@ impl GameState {
         self.replace_controlled_piece();
     }
 
+    pub fn on_input_hold_piece(&mut self) {
+        if !self.can_hold {
+            return;
+        }
+        let new_piece = match self.hold_piece {
+            Some(shape) => shape,
+            None => self.random_bag.take_next(),
+        };
+        self.hold_piece = Some(self.controlled_blocks.minos().shape());
+        self.controlled_blocks = ControlledBlocks::new(self.clock.now(), new_piece);
+        self.can_hold = false;
+    }
+
     pub fn render_info(&self) -> RenderInfo {
         RenderInfo {
             playing_field: PlayingFieldRenderBlocksInstructions::new(
@@ -81,6 +98,7 @@ impl GameState {
             .apply_to_field(&mut self.field);
 
         self.field.remove_lines();
+        self.can_hold = true;
 
         // Replace the stopped blocks with new ones
         self.controlled_blocks =
