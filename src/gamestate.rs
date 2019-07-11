@@ -2,6 +2,7 @@ use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
 use crate::position::{RotateDir, ShiftDir};
 use crate::random_bag::RandomBag;
+use crate::shapes::Shape;
 use crate::time::GameClock;
 
 pub struct GameState {
@@ -13,6 +14,7 @@ pub struct GameState {
 
 pub struct RenderInfo<'a> {
     pub playing_field: PlayingFieldRenderBlocksInstructions<'a>,
+    pub previews: Vec<Shape>,
 }
 
 impl GameState {
@@ -63,6 +65,7 @@ impl GameState {
                 self.controlled_blocks.minos(),
                 self.controlled_blocks.ghost_minos(&self.field),
             ),
+            previews: self.random_bag.previews(),
         }
     }
 
