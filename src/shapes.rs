@@ -2,12 +2,8 @@ use crate::field::{CheckableField, Field};
 use crate::position::Coord;
 use crate::position::{p, Pos, RotateDir, Rotations};
 use crate::render::{BlockRenderInstructions, DrawBlockType, RenderBlockInfo};
-use num_traits::FromPrimitive;
-use rand::random;
 
-const NUM_SHAPES: usize = 7;
-
-#[derive(Copy, Clone, FromPrimitive, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Shape {
     I,
     O,
@@ -151,12 +147,6 @@ impl Shape {
                 Three => [p(0, 2), p(1, 1), p(1, 2), p(1, 3)],
             },
         }
-    }
-}
-
-impl Shape {
-    pub fn random() -> Shape {
-        Shape::from_usize(random::<usize>() % NUM_SHAPES).expect("Unexpected shape enum value")
     }
 }
 

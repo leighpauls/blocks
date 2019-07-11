@@ -1,13 +1,14 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
 use crate::position::{RotateDir, ShiftDir};
-use crate::shapes::Shape;
+use crate::random_bag::RandomBag;
 use crate::time::GameClock;
 
 pub struct GameState {
     field: Field,
     controlled_blocks: ControlledBlocks,
     clock: GameClock,
+    random_bag: RandomBag,
 }
 
 pub struct RenderInfo<'a> {
@@ -18,10 +19,13 @@ impl GameState {
     pub fn new() -> GameState {
         let clock = GameClock::new();
         let now = clock.now();
+        let mut rb = RandomBag::new();
+
         GameState {
             field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(now, Shape::random()),
+            controlled_blocks: ControlledBlocks::new(now, rb.take_next()),
             clock: clock,
+            random_bag: rb,
         }
     }
 
@@ -76,6 +80,7 @@ impl GameState {
         self.field.remove_lines();
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new(self.clock.now(), Shape::random());
+        self.controlled_blocks =
+            ControlledBlocks::new(self.clock.now(), self.random_bag.take_next());
     }
 }
