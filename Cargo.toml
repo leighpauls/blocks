@@ -5,10 +5,11 @@ authors = ["leighpauls"]
 edition = "2018"
 
 [dependencies]
-quicksilver = "*"
+quicksilver = "0.3.15"
 num-derive = "0.2.5"
 num-traits = "0.2.8"
 rand = "0.7.0"
+futures = "0.1.27"
 
 [dev-dependencies]
 double = "0.2.3"

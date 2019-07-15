@@ -9,6 +9,7 @@ extern crate hamcrest2;
 extern crate quicksilver;
 #[macro_use]
 extern crate num_derive;
+extern crate futures;
 extern crate num_traits;
 extern crate rand;
 
@@ -24,52 +25,80 @@ mod shapes;
 mod tetromino;
 mod time;
 
+use futures::Async;
 use gamestate::GameState;
 use quicksilver::{
     geom::{Transform, Vector},
-    graphics::Color,
+    graphics::{Color, Font},
     input::{ButtonState, Key},
     lifecycle::{run, Event, Settings, State, Window},
-    Result,
+    Error, Future, Result,
 };
 use render::{render_blocks, BlockRenderInstructions};
 
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
 struct Game {
+    state: GameState,
+    screen_size: Vector,
+    score_font: Font,
+}
+
+type FontFuture = Box<Future<Item = Font, Error = Error>>;
+
+enum LoadingGame {
+    InProgress(FontFuture),
+    Loaded(Game),
+    Swap,
+}
+
+impl LoadingGame {
+    fn evolve(&mut self, window: &Window) -> Result<()> {
+        if let LoadingGame::Loaded(_) = self {
+            return Ok(());
+        }
+
+        let mut previous = std::mem::replace(self, LoadingGame::Swap);
+        if let LoadingGame::InProgress(ref mut font_future) = previous {
+            if let Async::Ready(font) = font_future.poll()? {
+                *self = LoadingGame::Loaded(Game {
+                    state: GameState::new(),
+                    screen_size: window.screen_size(),
+                    score_font: font,
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+struct GameWrapper {
     // Initialzied on the first loop
-    state_option: Option<(GameState, Vector)>,
+    loading_game: LoadingGame,
 }
 
-impl Game {
-    fn game_state(&mut self) -> &mut GameState {
-        &mut self
-            .state_option
-            .as_mut()
-            .expect("Getting game state beore first loop")
-            .0
-    }
-    fn screen_size(&self) -> Vector {
-        self.state_option
-            .as_ref()
-            .expect("Getting screen size before first loop")
-            .1
-    }
-}
-
-impl State for Game {
-    fn new() -> Result<Game> {
-        Ok(Game { state_option: None })
+impl State for GameWrapper {
+    fn new() -> Result<GameWrapper> {
+        Ok(GameWrapper {
+            loading_game: LoadingGame::InProgress(Box::new(Font::load("Roboto-Medium.ttf"))),
+        })
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
+        let game: &mut Game = match self.loading_game {
+            LoadingGame::Loaded(ref mut g) => g,
+            _ => {
+                return Ok(());
+            }
+        };
+
         window.clear(Color::WHITE)?;
 
-        let screen_size = self.screen_size();
+        let screen_size = game.screen_size;
         let full_height = screen_size.y;
         let block_size = BLOCK_SIZE_RATIO * full_height;
 
-        let render_info = self.game_state().render_info();
+        let render_info = game.state.render_info();
 
         let scale_transform = Transform::scale((block_size, block_size));
         let position_transform = Transform::translate((
@@ -116,11 +145,12 @@ impl State for Game {
     }
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
-        if let None = self.state_option {
-            self.state_option = Some((GameState::new(), window.screen_size()));
+        self.loading_game.evolve(window)?;
+
+        if let LoadingGame::Loaded(ref mut game) = self.loading_game {
+            game.state.update(window.keyboard());
         }
 
-        self.game_state().update(window.keyboard());
         Ok(())
     }
 
@@ -134,8 +164,8 @@ impl State for Game {
 }
 
 fn main() {
-    run::<Game>(
-        "Draw Geometry",
+    run::<GameWrapper>(
+        "Blocks",
         Vector::new(800, 600),
         Settings {
             update_rate: 1000.0 / 120.0,
