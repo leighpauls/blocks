@@ -7,44 +7,69 @@ pub enum InputEvent {
     Unchanged,
 }
 
-pub struct KeyStateMachine {
-    next_repeat_time: Option<GameTime>,
+pub trait KeyStateMachine {
+    fn update(&mut self, is_down: bool, now: GameTime) -> InputEvent;
 }
 
-const FIRST_REPEAT_DURATION: Duration = Duration::from_millis(150);
-const CONTINUED_REPEAT_DURATION: Duration = Duration::from_millis(50);
+pub struct RepeatingKeyStateMachine {
+    next_repeat_time: Option<GameTime>,
+    first_repeat_duration: Duration,
+    continued_repeat_duration: Duration,
+}
 
-impl KeyStateMachine {
-    pub fn new() -> KeyStateMachine {
-        KeyStateMachine {
+impl RepeatingKeyStateMachine {
+    pub fn new(first: Duration, continued: Duration) -> Self {
+        RepeatingKeyStateMachine {
             next_repeat_time: None,
+            first_repeat_duration: first,
+            continued_repeat_duration: continued,
         }
     }
+}
 
-    pub fn update(&mut self, is_down: bool, now: GameTime) -> InputEvent {
-        match self.next_repeat_time {
-            None => {
-                if is_down {
-                    self.next_repeat_time = Some(now + FIRST_REPEAT_DURATION);
+impl KeyStateMachine for RepeatingKeyStateMachine {
+    fn update(&mut self, is_down: bool, now: GameTime) -> InputEvent {
+        match (self.next_repeat_time, is_down) {
+            (None, true) => {
+                self.next_repeat_time = Some(now + self.first_repeat_duration);
+                InputEvent::Fire
+            }
+            (None, false) => InputEvent::Unchanged,
+            (Some(repeat_time), true) => {
+                if repeat_time < now {
+                    self.next_repeat_time = Some(repeat_time + self.continued_repeat_duration);
                     InputEvent::Fire
                 } else {
                     InputEvent::Unchanged
                 }
             }
-            Some(repeat_time) => {
-                if is_down {
-                    if repeat_time < now {
-                        self.next_repeat_time = Some(repeat_time + CONTINUED_REPEAT_DURATION);
-                        InputEvent::Fire
-                    } else {
-                        InputEvent::Unchanged
-                    }
-                } else {
-                    self.next_repeat_time = None;
-                    InputEvent::Unchanged
-                }
+            (Some(_), false) => {
+                self.next_repeat_time = None;
+                InputEvent::Unchanged
             }
         }
+    }
+}
+
+pub struct SingleKeyStateMachine {
+    was_down: bool,
+}
+
+impl SingleKeyStateMachine {
+    pub fn new() -> Self {
+        SingleKeyStateMachine { was_down: false }
+    }
+}
+
+impl KeyStateMachine for SingleKeyStateMachine {
+    fn update(&mut self, is_down: bool, _now: GameTime) -> InputEvent {
+        let result = if is_down && !self.was_down {
+            InputEvent::Fire
+        } else {
+            InputEvent::Unchanged
+        };
+        self.was_down = is_down;
+        result
     }
 }
 
@@ -53,12 +78,15 @@ mod tests {
     use super::*;
     use crate::time::GameClock;
 
+    const FIRST_DURATION: Duration = Duration::from_millis(100);
+    const CONTINUED_DURATION: Duration = Duration::from_millis(40);
+
     #[test]
     fn states() {
         let clock = GameClock::new();
         let start_time = clock.now();
 
-        let mut ksm = KeyStateMachine::new();
+        let mut ksm = RepeatingKeyStateMachine::new(FIRST_DURATION, CONTINUED_DURATION);
         assert_eq!(InputEvent::Unchanged, ksm.update(false, start_time));
         assert_eq!(InputEvent::Fire, ksm.update(true, start_time));
         assert_eq!(InputEvent::Unchanged, ksm.update(true, start_time));
@@ -72,20 +100,20 @@ mod tests {
 
         let small_duration = Duration::from_millis(1);
 
-        let mut ksm = KeyStateMachine::new();
+        let mut ksm = RepeatingKeyStateMachine::new(FIRST_DURATION, CONTINUED_DURATION);
 
         assert_eq!(InputEvent::Fire, ksm.update(true, time));
 
         time = time + small_duration;
         assert_eq!(InputEvent::Unchanged, ksm.update(true, time));
 
-        time = time + FIRST_REPEAT_DURATION;
+        time = time + FIRST_DURATION;
         assert_eq!(InputEvent::Fire, ksm.update(true, time));
 
         time = time + small_duration;
         assert_eq!(InputEvent::Unchanged, ksm.update(true, time));
 
-        time = time + CONTINUED_REPEAT_DURATION;
+        time = time + CONTINUED_DURATION;
         assert_eq!(InputEvent::Fire, ksm.update(true, time));
     }
 }
