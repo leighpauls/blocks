@@ -15,6 +15,8 @@ extern crate rand;
 mod controlled;
 mod field;
 mod gamestate;
+mod input;
+mod keybindings;
 mod position;
 mod random_bag;
 mod render;
@@ -23,7 +25,6 @@ mod tetromino;
 mod time;
 
 use gamestate::GameState;
-use position::{RotateDir, ShiftDir};
 use quicksilver::{
     geom::{Transform, Vector},
     graphics::Color,
@@ -119,24 +120,12 @@ impl State for Game {
             self.state_option = Some((GameState::new(), window.screen_size()));
         }
 
-        self.game_state().update();
+        self.game_state().update(window.keyboard());
         Ok(())
     }
 
     fn event(&mut self, event: &Event, window: &mut Window) -> Result<()> {
-        let game_state = self.game_state();
         match event {
-            Event::Key(Key::Left, ButtonState::Pressed) => {
-                game_state.on_input_shift(ShiftDir::Left)
-            }
-            Event::Key(Key::Right, ButtonState::Pressed) => {
-                game_state.on_input_shift(ShiftDir::Right)
-            }
-            Event::Key(Key::Down, ButtonState::Pressed) => game_state.on_input_soft_drop(),
-            Event::Key(Key::Z, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CCW),
-            Event::Key(Key::X, ButtonState::Pressed) => game_state.on_input_rotate(RotateDir::CW),
-            Event::Key(Key::Space, ButtonState::Pressed) => game_state.on_input_hard_drop(),
-            Event::Key(Key::C, ButtonState::Pressed) => game_state.on_input_hold_piece(),
             Event::Key(Key::Escape, ButtonState::Pressed) => window.close(),
             _ => (),
         }

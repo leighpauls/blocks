@@ -1,9 +1,12 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
+use crate::keybindings::{KeyboardStates, Trigger};
 use crate::position::{RotateDir, ShiftDir};
 use crate::random_bag::RandomBag;
 use crate::shapes::Shape;
 use crate::time::GameClock;
+use quicksilver::input::{ButtonState, Key};
+use std::ops::Index;
 
 pub struct GameState {
     field: Field,
@@ -12,6 +15,7 @@ pub struct GameState {
     random_bag: RandomBag,
     hold_piece: Option<Shape>,
     can_hold: bool,
+    keyboard_states: KeyboardStates,
 }
 
 pub struct RenderInfo<'a> {
@@ -33,13 +37,26 @@ impl GameState {
             random_bag: rb,
             hold_piece: None,
             can_hold: true,
+            keyboard_states: KeyboardStates::new(),
         }
     }
 
-    pub fn update(&mut self) {
-        let drop_result = self
-            .controlled_blocks
-            .maybe_periodic_drop(&self.field, self.clock.now());
+    pub fn update<T>(&mut self, keyboard: &T)
+    where
+        T: Index<Key, Output = ButtonState>,
+    {
+        let now = self.clock.now();
+        for trigger in self.keyboard_states.update(keyboard, now) {
+            match trigger {
+                Trigger::Shift(dir) => self.on_input_shift(dir),
+                Trigger::SoftDown => self.on_input_soft_drop(),
+                Trigger::Rotate(dir) => self.on_input_rotate(dir),
+                Trigger::HardDrop => self.on_input_hard_drop(),
+                Trigger::HoldPiece => self.on_input_hold_piece(),
+            }
+        }
+
+        let drop_result = self.controlled_blocks.maybe_periodic_drop(&self.field, now);
         self.handle_soft_drop(drop_result);
     }
 
