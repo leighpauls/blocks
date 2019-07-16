@@ -42,14 +42,22 @@ impl ControlledBlocks {
     }
 
     pub fn shift(&mut self, field: &CheckableField, dir: ShiftDir) {
-        if let Some(new) = self.tetromino.try_shift(dir, field) {
-            self.tetromino = new;
-        }
+        self.manual_movement(self.tetromino.try_shift(dir, field));
     }
 
     pub fn rotate(&mut self, field: &CheckableField, dir: RotateDir) {
-        if let Some(new) = self.tetromino.try_rotate(dir, field) {
-            self.tetromino = new;
+        self.manual_movement(self.tetromino.try_rotate(dir, field));
+    }
+
+    fn manual_movement(&mut self, new_tetromino: Option<Tetromino>) {
+        const MOVEMENT_REGAIN_LOCK: Duration = Duration::from_millis(10);
+        if let Some(tet) = new_tetromino {
+            self.tetromino = tet;
+            if self.lock_time_accumulated > MOVEMENT_REGAIN_LOCK {
+                self.lock_time_accumulated -= MOVEMENT_REGAIN_LOCK;
+            } else {
+                self.lock_time_accumulated = Duration::from_millis(0);
+            }
         }
     }
 
