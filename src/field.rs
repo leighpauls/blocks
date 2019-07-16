@@ -25,14 +25,16 @@ pub struct PlayingFieldRenderBlocksIterator<'a> {
 
 pub struct PlayingFieldRenderBlocksInstructions<'a> {
     field: &'a Field,
-    controlled: Tetromino,
+    game_minos: GameMinos,
 }
 
+#[derive(Clone)]
 enum GameMinos {
     Controlled(ControlMinos),
     Clearing(Vec<Coord>),
 }
 
+#[derive(Clone)]
 struct ControlMinos {
     controlled: MinoSet,
     ghost: MinoSet,
@@ -155,10 +157,20 @@ impl<'a> PlayingFieldRenderBlocksIterator<'a> {
 }
 
 impl<'a> PlayingFieldRenderBlocksInstructions<'a> {
-    pub fn new(field: &'a Field, controlled: Tetromino) -> Self {
+    pub fn new_controlled(field: &'a Field, controlled: Tetromino) -> Self {
         Self {
             field: field,
-            controlled: controlled,
+            game_minos: GameMinos::Controlled(ControlMinos {
+                controlled: controlled.to_minos(),
+                ghost: controlled.hard_drop(field).to_minos(),
+            }),
+        }
+    }
+
+    pub fn new_clearing(field: &'a Field, lines: Vec<Coord>) -> Self {
+        Self {
+            field: field,
+            game_minos: GameMinos::Clearing(lines),
         }
     }
 }
@@ -176,10 +188,7 @@ impl<'a> BlockRenderInstructions<PlayingFieldRenderBlocksIterator<'a>>
     fn blocks(&self) -> PlayingFieldRenderBlocksIterator<'a> {
         PlayingFieldRenderBlocksIterator::<'a> {
             field: self.field,
-            game_minos: GameMinos::Controlled(ControlMinos {
-                controlled: self.controlled.to_minos(),
-                ghost: self.controlled.hard_drop(self.field).to_minos(),
-            }),
+            game_minos: self.game_minos.clone(),
             next_pos: p(0, 0),
         }
     }

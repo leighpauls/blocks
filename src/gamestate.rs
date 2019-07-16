@@ -1,6 +1,7 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
 use crate::keybindings::{KeyboardStates, Trigger};
+use crate::position::Coord;
 use crate::random_bag::RandomBag;
 use crate::shapes::Shape;
 use crate::time::{GameClock, GameTime};
@@ -10,7 +11,7 @@ use std::time::Duration;
 
 pub struct GameState {
     field: Field,
-    controlled_blocks: ControlledBlocks,
+    control: Control,
     clock: GameClock,
     random_bag: RandomBag,
     hold_piece: Option<Shape>,
@@ -27,6 +28,20 @@ pub struct RenderInfo<'a> {
     pub level: i32,
 }
 
+enum Control {
+    Blocks(ControlledBlocks),
+    WaitForClear(Vec<Coord>, GameTime),
+}
+
+impl Control {
+    fn as_blocks(&mut self) -> Option<&mut ControlledBlocks> {
+        match self {
+            Control::Blocks(cb) => Some(cb),
+            _ => None,
+        }
+    }
+}
+
 impl GameState {
     pub fn new() -> GameState {
         let clock = GameClock::new();
@@ -36,7 +51,11 @@ impl GameState {
 
         GameState {
             field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(now, rb.take_next(), level_drop_period(level)),
+            control: Control::Blocks(ControlledBlocks::new(
+                now,
+                rb.take_next(),
+                level_drop_period(level),
+            )),
             clock: clock,
             random_bag: rb,
             hold_piece: None,
@@ -46,48 +65,72 @@ impl GameState {
         }
     }
 
-    pub fn update<T>(&mut self, keyboard: &T)
+    pub fn update<T>(&mut self, keyboard: &T) -> Option<()>
     where
         T: Index<Key, Output = ButtonState>,
     {
         let now = self.clock.now();
-        for trigger in self.keyboard_states.update(keyboard, now) {
-            match trigger {
-                Trigger::Shift(dir) => self.controlled_blocks.shift(&self.field, dir),
-                Trigger::SoftDown => {
-                    let drop_result = self.controlled_blocks.manual_soft_drop(&self.field, now);
-                    self.handle_soft_drop(drop_result, now);
-                }
-                Trigger::Rotate(dir) => self.controlled_blocks.rotate(&self.field, dir),
-                Trigger::HardDrop => {
-                    self.controlled_blocks.hard_drop(&self.field);
-                    self.replace_controlled_piece(now);
-                }
-                Trigger::HoldPiece => {
-                    if self.can_hold {
-                        let new_piece = match self.hold_piece {
-                            Some(shape) => shape,
-                            None => self.random_bag.take_next(),
-                        };
-                        self.hold_piece = Some(self.controlled_blocks.minos().shape());
-                        self.controlled_blocks =
-                            ControlledBlocks::new(now, new_piece, level_drop_period(self.level()));
-                        self.can_hold = false;
-                    }
-                }
+
+        if let Control::WaitForClear(lines, end_time) = &mut self.control {
+            if *end_time <= now {
+                self.field.remove_lines(&lines);
+                self.control = Control::Blocks(self.take_next_block(now));
             }
         }
 
-        let drop_result = self.controlled_blocks.maybe_periodic_drop(&self.field, now);
+        for trigger in self.keyboard_states.update(keyboard, now) {
+            self.handle_input(trigger, now);
+        }
+        let drop_result = self
+            .control
+            .as_blocks()?
+            .maybe_periodic_drop(&self.field, now);
         self.handle_soft_drop(drop_result, now);
+        None
+    }
+
+    fn handle_input(&mut self, trigger: Trigger, now: GameTime) -> Option<()> {
+        let blocks = self.control.as_blocks()?;
+        match trigger {
+            Trigger::Shift(dir) => blocks.shift(&self.field, dir),
+            Trigger::SoftDown => {
+                let drop_result = blocks.manual_soft_drop(&self.field, now);
+                self.handle_soft_drop(drop_result, now);
+            }
+            Trigger::Rotate(dir) => blocks.rotate(&self.field, dir),
+            Trigger::HardDrop => {
+                blocks.hard_drop(&self.field);
+                self.replace_controlled_piece(now);
+            }
+            Trigger::HoldPiece => {
+                if self.can_hold {
+                    let new_piece = match self.hold_piece {
+                        Some(shape) => shape,
+                        None => self.random_bag.take_next(),
+                    };
+                    self.hold_piece = Some(blocks.minos().shape());
+                    self.control = Control::Blocks(ControlledBlocks::new(
+                        now,
+                        new_piece,
+                        level_drop_period(self.level()),
+                    ));
+                    self.can_hold = false;
+                }
+            }
+        };
+        None
     }
 
     pub fn render_info(&self) -> RenderInfo {
         RenderInfo {
-            playing_field: PlayingFieldRenderBlocksInstructions::new(
-                &self.field,
-                self.controlled_blocks.tetromino,
-            ),
+            playing_field: match &self.control {
+                Control::Blocks(b) => {
+                    PlayingFieldRenderBlocksInstructions::new_controlled(&self.field, b.tetromino)
+                }
+                Control::WaitForClear(lines, _) => {
+                    PlayingFieldRenderBlocksInstructions::new_clearing(&self.field, lines.clone())
+                }
+            },
             previews: self.random_bag.previews(),
             hold_piece: self.hold_piece,
             cleared_lines: self.cleared_lines,
@@ -101,30 +144,35 @@ impl GameState {
         }
     }
 
-    fn replace_controlled_piece(&mut self, now: GameTime) {
-        self.controlled_blocks
+    fn replace_controlled_piece(&mut self, now: GameTime) -> Option<()> {
+        self.control
+            .as_blocks()?
             .minos()
             .apply_to_field(&mut self.field);
         self.can_hold = true;
 
         let lines = self.field.find_lines();
-        if !lines.is_empty() {
+        if lines.is_empty() {
+            // Replace the stopped blocks with new ones
+            self.control = Control::Blocks(self.take_next_block(now));
+        } else {
             self.cleared_lines += lines.len() as i32;
-
-            self.field.remove_lines(&lines);
+            self.control = Control::WaitForClear(lines, now + Duration::from_millis(500));
         }
-
-        // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new(
-            now,
-            self.random_bag.take_next(),
-            level_drop_period(self.level()),
-        );
+        None
     }
 
     fn level(&self) -> i32 {
         const LINES_PER_LEVEL: i32 = 10;
         self.cleared_lines / LINES_PER_LEVEL + 1
+    }
+
+    fn take_next_block(&mut self, now: GameTime) -> ControlledBlocks {
+        ControlledBlocks::new(
+            now,
+            self.random_bag.take_next(),
+            level_drop_period(self.level()),
+        )
     }
 }
 
