@@ -145,7 +145,7 @@ impl State for GameWrapper {
         let score_image = game.score_font.render(
             &format!(
                 "Lines: {}\nLevel: {}",
-                render_info.remaining_lines, render_info.level
+                render_info.cleared_lines, render_info.level
             ),
             &style,
         )?;

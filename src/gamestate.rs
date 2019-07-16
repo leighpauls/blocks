@@ -16,19 +16,16 @@ pub struct GameState {
     hold_piece: Option<Shape>,
     can_hold: bool,
     keyboard_states: KeyboardStates,
-    remaining_lines: i32,
-    level: i32,
+    cleared_lines: i32,
 }
 
 pub struct RenderInfo<'a> {
     pub playing_field: PlayingFieldRenderBlocksInstructions<'a>,
     pub previews: Vec<Shape>,
     pub hold_piece: Option<Shape>,
-    pub remaining_lines: i32,
+    pub cleared_lines: i32,
     pub level: i32,
 }
-
-const LINES_PER_LEVEL: i32 = 10;
 
 impl GameState {
     pub fn new() -> GameState {
@@ -45,8 +42,7 @@ impl GameState {
             hold_piece: None,
             can_hold: true,
             keyboard_states: KeyboardStates::new(),
-            remaining_lines: LINES_PER_LEVEL,
-            level: level,
+            cleared_lines: 0,
         }
     }
 
@@ -75,7 +71,7 @@ impl GameState {
                         };
                         self.hold_piece = Some(self.controlled_blocks.minos().shape());
                         self.controlled_blocks =
-                            ControlledBlocks::new(now, new_piece, level_drop_period(self.level));
+                            ControlledBlocks::new(now, new_piece, level_drop_period(self.level()));
                         self.can_hold = false;
                     }
                 }
@@ -94,8 +90,8 @@ impl GameState {
             ),
             previews: self.random_bag.previews(),
             hold_piece: self.hold_piece,
-            remaining_lines: self.remaining_lines,
-            level: self.level,
+            cleared_lines: self.cleared_lines,
+            level: self.level(),
         }
     }
 
@@ -111,11 +107,7 @@ impl GameState {
             .apply_to_field(&mut self.field);
 
         let removed_lines = self.field.remove_lines();
-        self.remaining_lines -= removed_lines;
-        if self.remaining_lines <= 0 {
-            self.remaining_lines = LINES_PER_LEVEL;
-            self.level += 1;
-        }
+        self.cleared_lines += removed_lines;
 
         self.can_hold = true;
 
@@ -123,8 +115,13 @@ impl GameState {
         self.controlled_blocks = ControlledBlocks::new(
             now,
             self.random_bag.take_next(),
-            level_drop_period(self.level),
+            level_drop_period(self.level()),
         );
+    }
+
+    fn level(&self) -> i32 {
+        const LINES_PER_LEVEL: i32 = 10;
+        self.cleared_lines / LINES_PER_LEVEL + 1
     }
 }
 
