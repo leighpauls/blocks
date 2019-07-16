@@ -28,8 +28,8 @@ mod time;
 use futures::Async;
 use gamestate::GameState;
 use quicksilver::{
-    geom::{Transform, Vector},
-    graphics::{Color, Font},
+    geom::{Shape, Transform, Vector},
+    graphics::{Background::Img, Color, Font, FontStyle},
     input::{ButtonState, Key},
     lifecycle::{run, Event, Settings, State, Window},
     Error, Future, Result,
@@ -140,6 +140,21 @@ impl State for GameWrapper {
                 window,
             );
         }
+
+        let style = FontStyle::new(24.0, Color::BLACK);
+        let score_image = game.score_font.render(
+            &format!(
+                "Lines: {}\nLevel: {}",
+                render_info.remaining_lines, render_info.level
+            ),
+            &style,
+        )?;
+        window.draw(
+            &score_image
+                .area()
+                .translate((screen_size.x * 0.7, screen_size.y * 0.7)),
+            Img(&score_image),
+        );
 
         Ok(())
     }

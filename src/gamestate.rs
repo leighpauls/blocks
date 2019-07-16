@@ -22,6 +22,8 @@ pub struct RenderInfo<'a> {
     pub playing_field: PlayingFieldRenderBlocksInstructions<'a>,
     pub previews: Vec<Shape>,
     pub hold_piece: Option<Shape>,
+    pub remaining_lines: i32,
+    pub level: i32,
 }
 
 impl GameState {
@@ -102,6 +104,8 @@ impl GameState {
             ),
             previews: self.random_bag.previews(),
             hold_piece: self.hold_piece,
+            remaining_lines: 10,
+            level: 1,
         }
     }
 
