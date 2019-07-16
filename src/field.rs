@@ -19,14 +19,23 @@ pub trait CheckableField {
 
 pub struct PlayingFieldRenderBlocksIterator<'a> {
     field: &'a Field,
-    controlled_minos: MinoSet,
-    ghost_minos: MinoSet,
+    game_minos: GameMinos,
     next_pos: Pos,
 }
 
 pub struct PlayingFieldRenderBlocksInstructions<'a> {
     field: &'a Field,
     controlled: Tetromino,
+}
+
+enum GameMinos {
+    Controlled(ControlMinos),
+    Clearing(Vec<Coord>),
+}
+
+struct ControlMinos {
+    controlled: MinoSet,
+    ghost: MinoSet,
 }
 
 impl Field {
@@ -42,32 +51,51 @@ impl Field {
     }
 
     pub fn occupy(&mut self, pos: Pos, shape: Shape) {
-        self.blocks[pos.x as usize][pos.y as usize] = FieldBlock::Occupied(shape);
+        *self.bp_mut(pos) = FieldBlock::Occupied(shape);
     }
 
-    pub fn remove_lines(&mut self) -> i32 {
-        let mut result = 0;
-        'row_loop: for y in (0..(Self::GAME_HEIGHT as usize)).rev() {
-            for x in 0..(Self::WIDTH as usize) {
-                if let FieldBlock::Empty = self.blocks[x][y] {
+    pub fn find_lines(&self) -> Vec<Coord> {
+        let mut result = vec![];
+        'row_loop: for y in (0..Self::GAME_HEIGHT).rev() {
+            for x in 0..Self::WIDTH {
+                if let FieldBlock::Empty = self.b(x, y) {
                     continue 'row_loop;
                 }
             }
-            result += 1;
-            self.drop_lines_above(y);
+            result.push(y);
         }
         result
     }
 
-    fn drop_lines_above(&mut self, row: usize) {
-        for y in (row + 1)..(Self::GAME_HEIGHT as usize) {
-            for x in 0..(Self::WIDTH as usize) {
-                self.blocks[x][y - 1] = self.blocks[x][y];
+    pub fn remove_lines(&mut self, lines: &Vec<Coord>) {
+        for y in lines {
+            self.drop_lines_above(*y);
+        }
+    }
+
+    fn drop_lines_above(&mut self, row: Coord) {
+        for y in (row + 1)..Self::GAME_HEIGHT {
+            for x in 0..Self::WIDTH {
+                *self.b_mut(x, y - 1) = self.b(x, y);
             }
         }
-        for x in 0..(Self::WIDTH as usize) {
-            self.blocks[x][(Self::GAME_HEIGHT - 1) as usize] = FieldBlock::Empty;
+        for x in 0..Self::WIDTH {
+            *self.b_mut(x, Self::GAME_HEIGHT - 1) = FieldBlock::Empty;
         }
+    }
+
+    fn bp(&self, p: Pos) -> FieldBlock {
+        self.b(p.x, p.y)
+    }
+    fn b(&self, x: Coord, y: Coord) -> FieldBlock {
+        self.blocks[x as usize][y as usize]
+    }
+
+    fn bp_mut(&mut self, p: Pos) -> &mut FieldBlock {
+        self.b_mut(p.x, p.y)
+    }
+    fn b_mut(&mut self, x: Coord, y: Coord) -> &mut FieldBlock {
+        &mut self.blocks[x as usize][y as usize]
     }
 }
 
@@ -77,7 +105,7 @@ impl CheckableField for Field {
             && pos.x < Self::WIDTH
             && pos.y >= 0
             && pos.y < Self::GAME_HEIGHT
-            && self.blocks[pos.x as usize][pos.y as usize] == FieldBlock::Empty
+            && self.bp(pos) == FieldBlock::Empty
     }
 }
 
@@ -91,18 +119,7 @@ impl<'a> Iterator for PlayingFieldRenderBlocksIterator<'a> {
         let pos = self.next_pos;
         let result = Some(RenderBlockInfo {
             pos: pos,
-            block_type: if self.controlled_minos.contains(pos) {
-                DrawBlockType::Occupied(self.controlled_minos.shape())
-            } else if self.ghost_minos.contains(pos) {
-                DrawBlockType::GhostPiece(self.ghost_minos.shape())
-            } else if pos.y >= Field::PLAYING_BOUNDARY_HEIGHT {
-                DrawBlockType::OutOfPlay
-            } else {
-                match self.field.blocks[pos.x as usize][pos.y as usize] {
-                    FieldBlock::Empty => DrawBlockType::Empty,
-                    FieldBlock::Occupied(shape) => DrawBlockType::Occupied(shape),
-                }
-            },
+            block_type: self.select_block_type(pos),
         });
 
         self.next_pos = self.next_pos + p(1, 0);
@@ -110,6 +127,30 @@ impl<'a> Iterator for PlayingFieldRenderBlocksIterator<'a> {
             self.next_pos = p(0, self.next_pos.y + 1);
         }
         result
+    }
+}
+
+impl<'a> PlayingFieldRenderBlocksIterator<'a> {
+    fn select_block_type(&self, pos: Pos) -> DrawBlockType {
+        if let GameMinos::Controlled(minos) = &self.game_minos {
+            if minos.controlled.contains(pos) {
+                return DrawBlockType::Occupied(minos.controlled.shape());
+            } else if minos.ghost.contains(pos) {
+                return DrawBlockType::GhostPiece(minos.ghost.shape());
+            }
+        } else if let GameMinos::Clearing(lines) = &self.game_minos {
+            if lines.contains(&pos.y) {
+                return DrawBlockType::ClearingLine;
+            }
+        }
+        if pos.y >= Field::PLAYING_BOUNDARY_HEIGHT {
+            DrawBlockType::OutOfPlay
+        } else {
+            match self.field.bp(pos) {
+                FieldBlock::Empty => DrawBlockType::Empty,
+                FieldBlock::Occupied(shape) => DrawBlockType::Occupied(shape),
+            }
+        }
     }
 }
 
@@ -135,8 +176,10 @@ impl<'a> BlockRenderInstructions<PlayingFieldRenderBlocksIterator<'a>>
     fn blocks(&self) -> PlayingFieldRenderBlocksIterator<'a> {
         PlayingFieldRenderBlocksIterator::<'a> {
             field: self.field,
-            controlled_minos: self.controlled.to_minos(),
-            ghost_minos: self.controlled.hard_drop(self.field).to_minos(),
+            game_minos: GameMinos::Controlled(ControlMinos {
+                controlled: self.controlled.to_minos(),
+                ghost: self.controlled.hard_drop(self.field).to_minos(),
+            }),
             next_pos: p(0, 0),
         }
     }

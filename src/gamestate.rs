@@ -105,11 +105,14 @@ impl GameState {
         self.controlled_blocks
             .minos()
             .apply_to_field(&mut self.field);
-
-        let removed_lines = self.field.remove_lines();
-        self.cleared_lines += removed_lines;
-
         self.can_hold = true;
+
+        let lines = self.field.find_lines();
+        if !lines.is_empty() {
+            self.cleared_lines += lines.len() as i32;
+
+            self.field.remove_lines(&lines);
+        }
 
         // Replace the stopped blocks with new ones
         self.controlled_blocks = ControlledBlocks::new(

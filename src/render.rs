@@ -13,6 +13,7 @@ pub enum DrawBlockType {
     Occupied(Shape),
     OutOfPlay,
     GhostPiece(Shape),
+    ClearingLine,
 }
 
 impl DrawBlockType {
@@ -32,6 +33,7 @@ impl DrawBlockType {
                 Shape::J => Color::BLUE,
                 Shape::L => Color::ORANGE,
             },
+            DrawBlockType::ClearingLine => Color::from_rgba(0x80, 0x80, 0x80, 1.0),
         }
     }
 }
