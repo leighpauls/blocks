@@ -90,8 +90,7 @@ impl GameState {
         RenderInfo {
             playing_field: PlayingFieldRenderBlocksInstructions::new(
                 &self.field,
-                self.controlled_blocks.minos(),
-                self.controlled_blocks.ghost_minos(&self.field),
+                self.controlled_blocks.tetromino,
             ),
             previews: self.random_bag.previews(),
             hold_piece: self.hold_piece,

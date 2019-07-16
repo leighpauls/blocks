@@ -1,6 +1,7 @@
 use crate::position::{p, Coord, Pos};
 use crate::render::{BlockRenderInstructions, DrawBlockType, RenderBlockInfo};
 use crate::shapes::{MinoSet, Shape};
+use crate::tetromino::Tetromino;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum FieldBlock {
@@ -21,6 +22,11 @@ pub struct PlayingFieldRenderBlocksIterator<'a> {
     controlled_minos: MinoSet,
     ghost_minos: MinoSet,
     next_pos: Pos,
+}
+
+pub struct PlayingFieldRenderBlocksInstructions<'a> {
+    field: &'a Field,
+    controlled: Tetromino,
 }
 
 impl Field {
@@ -107,18 +113,11 @@ impl<'a> Iterator for PlayingFieldRenderBlocksIterator<'a> {
     }
 }
 
-pub struct PlayingFieldRenderBlocksInstructions<'a> {
-    field: &'a Field,
-    controlled_minos: MinoSet,
-    ghost_minos: MinoSet,
-}
-
 impl<'a> PlayingFieldRenderBlocksInstructions<'a> {
-    pub fn new(field: &'a Field, controlled_minos: MinoSet, ghost_minos: MinoSet) -> Self {
+    pub fn new(field: &'a Field, controlled: Tetromino) -> Self {
         Self {
             field: field,
-            controlled_minos: controlled_minos,
-            ghost_minos: ghost_minos,
+            controlled: controlled,
         }
     }
 }
@@ -136,8 +135,8 @@ impl<'a> BlockRenderInstructions<PlayingFieldRenderBlocksIterator<'a>>
     fn blocks(&self) -> PlayingFieldRenderBlocksIterator<'a> {
         PlayingFieldRenderBlocksIterator::<'a> {
             field: self.field,
-            controlled_minos: self.controlled_minos.clone(),
-            ghost_minos: self.ghost_minos.clone(),
+            controlled_minos: self.controlled.to_minos(),
+            ghost_minos: self.controlled.hard_drop(self.field).to_minos(),
             next_pos: p(0, 0),
         }
     }

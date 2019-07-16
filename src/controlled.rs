@@ -6,7 +6,7 @@ use crate::time::GameTime;
 use std::time::Duration;
 
 pub struct ControlledBlocks {
-    tetromino: Tetromino,
+    pub tetromino: Tetromino,
     next_drop_time: GameTime,
     lock_time_accumulated: Duration,
     locking_prev_time: Option<GameTime>,
@@ -35,10 +35,6 @@ impl ControlledBlocks {
 
     pub fn minos(&self) -> MinoSet {
         self.tetromino.to_minos()
-    }
-
-    pub fn ghost_minos(&self, field: &CheckableField) -> MinoSet {
-        self.tetromino.hard_drop(field).to_minos()
     }
 
     pub fn shift(&mut self, field: &CheckableField, dir: ShiftDir) {
