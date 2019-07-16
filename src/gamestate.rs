@@ -1,7 +1,6 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
 use crate::keybindings::{KeyboardStates, Trigger};
-use crate::position::{RotateDir, ShiftDir};
 use crate::random_bag::RandomBag;
 use crate::shapes::Shape;
 use crate::time::{GameClock, GameTime};
@@ -58,48 +57,33 @@ impl GameState {
         let now = self.clock.now();
         for trigger in self.keyboard_states.update(keyboard, now) {
             match trigger {
-                Trigger::Shift(dir) => self.on_input_shift(dir),
-                Trigger::SoftDown => self.on_input_soft_drop(now),
-                Trigger::Rotate(dir) => self.on_input_rotate(dir),
-                Trigger::HardDrop => self.on_input_hard_drop(now),
-                Trigger::HoldPiece => self.on_input_hold_piece(now),
+                Trigger::Shift(dir) => self.controlled_blocks.shift(&self.field, dir),
+                Trigger::SoftDown => {
+                    let drop_result = self.controlled_blocks.manual_soft_drop(&self.field, now);
+                    self.handle_soft_drop(drop_result, now);
+                }
+                Trigger::Rotate(dir) => self.controlled_blocks.rotate(&self.field, dir),
+                Trigger::HardDrop => {
+                    self.controlled_blocks.hard_drop(&self.field);
+                    self.replace_controlled_piece(now);
+                }
+                Trigger::HoldPiece => {
+                    if self.can_hold {
+                        let new_piece = match self.hold_piece {
+                            Some(shape) => shape,
+                            None => self.random_bag.take_next(),
+                        };
+                        self.hold_piece = Some(self.controlled_blocks.minos().shape());
+                        self.controlled_blocks =
+                            ControlledBlocks::new(now, new_piece, level_drop_period(self.level));
+                        self.can_hold = false;
+                    }
+                }
             }
         }
 
         let drop_result = self.controlled_blocks.maybe_periodic_drop(&self.field, now);
         self.handle_soft_drop(drop_result, now);
-    }
-
-    fn on_input_shift(&mut self, dir: ShiftDir) {
-        self.controlled_blocks.shift(&self.field, dir);
-    }
-
-    fn on_input_soft_drop(&mut self, now: GameTime) {
-        let drop_result = self.controlled_blocks.manual_soft_drop(&self.field, now);
-        self.handle_soft_drop(drop_result, now)
-    }
-
-    fn on_input_rotate(&mut self, dir: RotateDir) {
-        self.controlled_blocks.rotate(&self.field, dir);
-    }
-
-    fn on_input_hard_drop(&mut self, now: GameTime) {
-        self.controlled_blocks.hard_drop(&self.field);
-        self.replace_controlled_piece(now);
-    }
-
-    fn on_input_hold_piece(&mut self, now: GameTime) {
-        if !self.can_hold {
-            return;
-        }
-        let new_piece = match self.hold_piece {
-            Some(shape) => shape,
-            None => self.random_bag.take_next(),
-        };
-        self.hold_piece = Some(self.controlled_blocks.minos().shape());
-        self.controlled_blocks =
-            ControlledBlocks::new(now, new_piece, level_drop_period(self.level));
-        self.can_hold = false;
     }
 
     pub fn render_info(&self) -> RenderInfo {
