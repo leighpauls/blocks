@@ -10,9 +10,8 @@ pub struct ControlledBlocks {
     next_drop_time: GameTime,
     lock_time_accumulated: Duration,
     locking_prev_time: Option<GameTime>,
+    drop_period: Duration,
 }
-
-const DROP_PERIOD: Duration = Duration::from_millis(1000);
 
 fn start_pos() -> Pos {
     p(3, Field::PLAYING_BOUNDARY_HEIGHT - 2)
@@ -24,12 +23,13 @@ pub enum DropResult {
 }
 
 impl ControlledBlocks {
-    pub fn new(start_time: GameTime, shape: Shape) -> ControlledBlocks {
+    pub fn new(start_time: GameTime, shape: Shape, drop_period: Duration) -> ControlledBlocks {
         ControlledBlocks {
             tetromino: Tetromino::new(start_pos(), shape),
-            next_drop_time: start_time + DROP_PERIOD,
+            next_drop_time: start_time + drop_period,
             lock_time_accumulated: Duration::from_millis(0),
             locking_prev_time: None,
+            drop_period: drop_period,
         }
     }
 
@@ -63,7 +63,7 @@ impl ControlledBlocks {
             Some(dropped) => {
                 self.locking_prev_time = None;
                 if self.next_drop_time <= now {
-                    self.next_drop_time += DROP_PERIOD;
+                    self.next_drop_time += self.drop_period;
                     self.tetromino = dropped;
                 }
                 DropResult::Continue
@@ -76,7 +76,7 @@ impl ControlledBlocks {
             None => self.consume_lock_delay(now),
             Some(dropped) => {
                 self.locking_prev_time = None;
-                self.next_drop_time = now + DROP_PERIOD;
+                self.next_drop_time = now + self.drop_period;
                 self.tetromino = dropped;
                 DropResult::Continue
             }
@@ -92,7 +92,7 @@ impl ControlledBlocks {
         if self.lock_time_accumulated > Duration::from_millis(500) {
             DropResult::Stop
         } else {
-            self.next_drop_time = now + DROP_PERIOD;
+            self.next_drop_time = now + self.drop_period;
             DropResult::Continue
         }
     }
@@ -115,7 +115,7 @@ mod tests {
 
         let clock = GameClock::new();
         let start_time = clock.now();
-        let mut b = ControlledBlocks::new(start_time, Shape::I);
+        let mut b = ControlledBlocks::new(start_time, Shape::I, Duration::from_secs(1));
 
         b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(10));
 

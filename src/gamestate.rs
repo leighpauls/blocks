@@ -7,6 +7,7 @@ use crate::shapes::Shape;
 use crate::time::{GameClock, GameTime};
 use quicksilver::input::{ButtonState, Key};
 use std::ops::Index;
+use std::time::Duration;
 
 pub struct GameState {
     field: Field,
@@ -28,22 +29,25 @@ pub struct RenderInfo<'a> {
     pub level: i32,
 }
 
+const LINES_PER_LEVEL: i32 = 10;
+
 impl GameState {
     pub fn new() -> GameState {
         let clock = GameClock::new();
         let now = clock.now();
         let mut rb = RandomBag::new();
+        let level = 1;
 
         GameState {
             field: Field::new(),
-            controlled_blocks: ControlledBlocks::new(now, rb.take_next()),
+            controlled_blocks: ControlledBlocks::new(now, rb.take_next(), level_drop_period(level)),
             clock: clock,
             random_bag: rb,
             hold_piece: None,
             can_hold: true,
             keyboard_states: KeyboardStates::new(),
-            remaining_lines: 10,
-            level: 1,
+            remaining_lines: LINES_PER_LEVEL,
+            level: level,
         }
     }
 
@@ -93,7 +97,8 @@ impl GameState {
             None => self.random_bag.take_next(),
         };
         self.hold_piece = Some(self.controlled_blocks.minos().shape());
-        self.controlled_blocks = ControlledBlocks::new(now, new_piece);
+        self.controlled_blocks =
+            ControlledBlocks::new(now, new_piece, level_drop_period(self.level));
         self.can_hold = false;
     }
 
@@ -125,13 +130,22 @@ impl GameState {
         let removed_lines = self.field.remove_lines();
         self.remaining_lines -= removed_lines;
         if self.remaining_lines <= 0 {
-            self.remaining_lines = 10;
+            self.remaining_lines = LINES_PER_LEVEL;
             self.level += 1;
         }
 
         self.can_hold = true;
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks = ControlledBlocks::new(now, self.random_bag.take_next());
+        self.controlled_blocks = ControlledBlocks::new(
+            now,
+            self.random_bag.take_next(),
+            level_drop_period(self.level),
+        );
     }
+}
+
+fn level_drop_period(level: i32) -> Duration {
+    let time_seconds = (0.8 - ((level - 1) as f32 * 0.007)).powi(level - 1);
+    Duration::from_millis((time_seconds * 1000.0) as u64)
 }
