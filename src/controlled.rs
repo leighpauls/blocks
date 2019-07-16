@@ -8,6 +8,8 @@ use std::time::Duration;
 pub struct ControlledBlocks {
     tetromino: Tetromino,
     next_drop_time: GameTime,
+    lock_time_accumulated: Duration,
+    locking_prev_time: Option<GameTime>,
 }
 
 const DROP_PERIOD: Duration = Duration::from_millis(1000);
@@ -26,6 +28,8 @@ impl ControlledBlocks {
         ControlledBlocks {
             tetromino: Tetromino::new(start_pos(), shape),
             next_drop_time: start_time + DROP_PERIOD,
+            lock_time_accumulated: Duration::from_millis(0),
+            locking_prev_time: None,
         }
     }
 
@@ -54,24 +58,42 @@ impl ControlledBlocks {
     }
 
     pub fn maybe_periodic_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
-        if self.next_drop_time > now {
-            return DropResult::Continue;
+        match self.tetromino.try_down(field) {
+            None => self.consume_lock_delay(now),
+            Some(dropped) => {
+                self.locking_prev_time = None;
+                if self.next_drop_time <= now {
+                    self.next_drop_time += DROP_PERIOD;
+                    self.tetromino = dropped;
+                }
+                DropResult::Continue
+            }
         }
-        self.next_drop_time += DROP_PERIOD;
-        self.soft_drop(field)
     }
 
     pub fn manual_soft_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
-        self.next_drop_time = now + DROP_PERIOD;
-        self.soft_drop(field)
+        match self.tetromino.try_down(field) {
+            None => self.consume_lock_delay(now),
+            Some(dropped) => {
+                self.locking_prev_time = None;
+                self.next_drop_time = now + DROP_PERIOD;
+                self.tetromino = dropped;
+                DropResult::Continue
+            }
+        }
     }
 
-    fn soft_drop(&mut self, field: &CheckableField) -> DropResult {
-        if let Some(new) = self.tetromino.try_down(field) {
-            self.tetromino = new;
-            DropResult::Continue
-        } else {
+    fn consume_lock_delay(&mut self, now: GameTime) -> DropResult {
+        if let Some(prev_time) = self.locking_prev_time {
+            self.lock_time_accumulated += now - prev_time;
+        }
+        self.locking_prev_time = Some(now);
+
+        if self.lock_time_accumulated > Duration::from_millis(500) {
             DropResult::Stop
+        } else {
+            self.next_drop_time = now + DROP_PERIOD;
+            DropResult::Continue
         }
     }
 }

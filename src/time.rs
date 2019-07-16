@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Sub};
 use std::time::{Duration, Instant};
 
 #[derive(Copy, Clone, Ord, PartialOrd, PartialEq, Eq, Debug)]
@@ -36,6 +36,13 @@ impl Add<Duration> for GameTime {
 impl AddAssign<Duration> for GameTime {
     fn add_assign(&mut self, other: Duration) {
         *self = *self + other;
+    }
+}
+
+impl Sub<GameTime> for GameTime {
+    type Output = Duration;
+    fn sub(self, other: GameTime) -> Duration {
+        self.since_start - other.since_start
     }
 }
 

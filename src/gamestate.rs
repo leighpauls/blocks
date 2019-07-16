@@ -4,7 +4,7 @@ use crate::keybindings::{KeyboardStates, Trigger};
 use crate::position::{RotateDir, ShiftDir};
 use crate::random_bag::RandomBag;
 use crate::shapes::Shape;
-use crate::time::GameClock;
+use crate::time::{GameClock, GameTime};
 use quicksilver::input::{ButtonState, Key};
 use std::ops::Index;
 
@@ -55,38 +55,36 @@ impl GameState {
         for trigger in self.keyboard_states.update(keyboard, now) {
             match trigger {
                 Trigger::Shift(dir) => self.on_input_shift(dir),
-                Trigger::SoftDown => self.on_input_soft_drop(),
+                Trigger::SoftDown => self.on_input_soft_drop(now),
                 Trigger::Rotate(dir) => self.on_input_rotate(dir),
-                Trigger::HardDrop => self.on_input_hard_drop(),
-                Trigger::HoldPiece => self.on_input_hold_piece(),
+                Trigger::HardDrop => self.on_input_hard_drop(now),
+                Trigger::HoldPiece => self.on_input_hold_piece(now),
             }
         }
 
         let drop_result = self.controlled_blocks.maybe_periodic_drop(&self.field, now);
-        self.handle_soft_drop(drop_result);
+        self.handle_soft_drop(drop_result, now);
     }
 
-    pub fn on_input_shift(&mut self, dir: ShiftDir) {
+    fn on_input_shift(&mut self, dir: ShiftDir) {
         self.controlled_blocks.shift(&self.field, dir);
     }
 
-    pub fn on_input_soft_drop(&mut self) {
-        let drop_result = self
-            .controlled_blocks
-            .manual_soft_drop(&self.field, self.clock.now());
-        self.handle_soft_drop(drop_result)
+    fn on_input_soft_drop(&mut self, now: GameTime) {
+        let drop_result = self.controlled_blocks.manual_soft_drop(&self.field, now);
+        self.handle_soft_drop(drop_result, now)
     }
 
-    pub fn on_input_rotate(&mut self, dir: RotateDir) {
+    fn on_input_rotate(&mut self, dir: RotateDir) {
         self.controlled_blocks.rotate(&self.field, dir);
     }
 
-    pub fn on_input_hard_drop(&mut self) {
+    fn on_input_hard_drop(&mut self, now: GameTime) {
         self.controlled_blocks.hard_drop(&self.field);
-        self.replace_controlled_piece();
+        self.replace_controlled_piece(now);
     }
 
-    pub fn on_input_hold_piece(&mut self) {
+    fn on_input_hold_piece(&mut self, now: GameTime) {
         if !self.can_hold {
             return;
         }
@@ -95,7 +93,7 @@ impl GameState {
             None => self.random_bag.take_next(),
         };
         self.hold_piece = Some(self.controlled_blocks.minos().shape());
-        self.controlled_blocks = ControlledBlocks::new(self.clock.now(), new_piece);
+        self.controlled_blocks = ControlledBlocks::new(now, new_piece);
         self.can_hold = false;
     }
 
@@ -113,13 +111,13 @@ impl GameState {
         }
     }
 
-    fn handle_soft_drop(&mut self, drop_result: DropResult) {
+    fn handle_soft_drop(&mut self, drop_result: DropResult, now: GameTime) {
         if let DropResult::Stop = drop_result {
-            self.replace_controlled_piece();
+            self.replace_controlled_piece(now);
         }
     }
 
-    fn replace_controlled_piece(&mut self) {
+    fn replace_controlled_piece(&mut self, now: GameTime) {
         self.controlled_blocks
             .minos()
             .apply_to_field(&mut self.field);
@@ -134,7 +132,6 @@ impl GameState {
         self.can_hold = true;
 
         // Replace the stopped blocks with new ones
-        self.controlled_blocks =
-            ControlledBlocks::new(self.clock.now(), self.random_bag.take_next());
+        self.controlled_blocks = ControlledBlocks::new(now, self.random_bag.take_next());
     }
 }
