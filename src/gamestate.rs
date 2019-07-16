@@ -16,6 +16,8 @@ pub struct GameState {
     hold_piece: Option<Shape>,
     can_hold: bool,
     keyboard_states: KeyboardStates,
+    remaining_lines: i32,
+    level: i32,
 }
 
 pub struct RenderInfo<'a> {
@@ -40,6 +42,8 @@ impl GameState {
             hold_piece: None,
             can_hold: true,
             keyboard_states: KeyboardStates::new(),
+            remaining_lines: 10,
+            level: 1,
         }
     }
 
@@ -104,8 +108,8 @@ impl GameState {
             ),
             previews: self.random_bag.previews(),
             hold_piece: self.hold_piece,
-            remaining_lines: 10,
-            level: 1,
+            remaining_lines: self.remaining_lines,
+            level: self.level,
         }
     }
 
@@ -120,7 +124,13 @@ impl GameState {
             .minos()
             .apply_to_field(&mut self.field);
 
-        self.field.remove_lines();
+        let removed_lines = self.field.remove_lines();
+        self.remaining_lines -= removed_lines;
+        if self.remaining_lines <= 0 {
+            self.remaining_lines = 10;
+            self.level += 1;
+        }
+
         self.can_hold = true;
 
         // Replace the stopped blocks with new ones

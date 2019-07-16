@@ -39,16 +39,18 @@ impl Field {
         self.blocks[pos.x as usize][pos.y as usize] = FieldBlock::Occupied(shape);
     }
 
-    pub fn remove_lines(&mut self) {
+    pub fn remove_lines(&mut self) -> i32 {
+        let mut result = 0;
         'row_loop: for y in (0..(Self::GAME_HEIGHT as usize)).rev() {
             for x in 0..(Self::WIDTH as usize) {
                 if let FieldBlock::Empty = self.blocks[x][y] {
                     continue 'row_loop;
                 }
             }
-
+            result += 1;
             self.drop_lines_above(y);
         }
+        result
     }
 
     fn drop_lines_above(&mut self, row: usize) {
