@@ -9,7 +9,7 @@ pub struct LockDelay {
 }
 
 const LOCK_DELAY: Duration = Duration::from_millis(500);
-const ALLOWED_RESETS: u32 = 15;
+const ALLOWED_RESETS: u32 = 5;
 
 impl LockDelay {
     pub fn new() -> Self {
