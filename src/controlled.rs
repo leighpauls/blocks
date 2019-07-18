@@ -1,4 +1,5 @@
 use crate::field::{CheckableField, Field};
+use crate::lockdelay::LockDelay;
 use crate::position::{p, Pos, RotateDir, ShiftDir};
 use crate::shapes::{MinoSet, Shape};
 use crate::tetromino::Tetromino;
@@ -8,15 +9,15 @@ use std::time::Duration;
 pub struct ControlledBlocks {
     pub tetromino: Tetromino,
     next_drop_time: GameTime,
-    lock_time_accumulated: Duration,
-    locking_prev_time: Option<GameTime>,
     drop_period: Duration,
+    lock_delay: LockDelay,
 }
 
 fn start_pos() -> Pos {
     p(3, Field::PLAYING_BOUNDARY_HEIGHT - 2)
 }
 
+#[derive(PartialEq, Debug)]
 pub enum DropResult {
     Continue,
     Stop,
@@ -27,9 +28,8 @@ impl ControlledBlocks {
         ControlledBlocks {
             tetromino: Tetromino::new(start_pos(), shape),
             next_drop_time: start_time + drop_period,
-            lock_time_accumulated: Duration::from_millis(0),
-            locking_prev_time: None,
             drop_period: drop_period,
+            lock_delay: LockDelay::new(),
         }
     }
 
@@ -51,9 +51,9 @@ impl ControlledBlocks {
 
     pub fn maybe_periodic_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
         match self.tetromino.try_down(field) {
-            None => self.consume_lock_delay(now),
+            None => self.lock_delay.consume_time(now),
             Some(dropped) => {
-                self.locking_prev_time = None;
+                self.lock_delay.reset();
                 if self.next_drop_time <= now {
                     self.next_drop_time += self.drop_period;
                     self.tetromino = dropped;
@@ -65,9 +65,9 @@ impl ControlledBlocks {
 
     pub fn manual_soft_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
         match self.tetromino.try_down(field) {
-            None => self.consume_lock_delay(now),
+            None => self.lock_delay.consume_time(now),
             Some(dropped) => {
-                self.locking_prev_time = None;
+                self.lock_delay.reset();
                 self.next_drop_time = now + self.drop_period;
                 self.tetromino = dropped;
                 DropResult::Continue
@@ -76,28 +76,9 @@ impl ControlledBlocks {
     }
 
     fn manual_movement(&mut self, new_tetromino: Option<Tetromino>) {
-        const MOVEMENT_REGAIN_LOCK: Duration = Duration::from_millis(10);
         if let Some(tet) = new_tetromino {
             self.tetromino = tet;
-            if self.lock_time_accumulated > MOVEMENT_REGAIN_LOCK {
-                self.lock_time_accumulated -= MOVEMENT_REGAIN_LOCK;
-            } else {
-                self.lock_time_accumulated = Duration::from_millis(0);
-            }
-        }
-    }
-
-    fn consume_lock_delay(&mut self, now: GameTime) -> DropResult {
-        if let Some(prev_time) = self.locking_prev_time {
-            self.lock_time_accumulated += now - prev_time;
-        }
-        self.locking_prev_time = Some(now);
-
-        if self.lock_time_accumulated > Duration::from_millis(500) {
-            DropResult::Stop
-        } else {
-            self.next_drop_time = now + self.drop_period;
-            DropResult::Continue
+            self.lock_delay.reset();
         }
     }
 }

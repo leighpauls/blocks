@@ -18,6 +18,7 @@ mod field;
 mod gamestate;
 mod input;
 mod keybindings;
+mod lockdelay;
 mod position;
 mod random_bag;
 mod render;
