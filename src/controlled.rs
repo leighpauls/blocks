@@ -49,18 +49,20 @@ impl ControlledBlocks {
         self.tetromino = self.tetromino.hard_drop(field);
     }
 
-    pub fn maybe_periodic_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
-        match self.tetromino.try_down(field) {
-            None => self.lock_delay.consume_time(now),
-            Some(dropped) => {
-                self.lock_delay.reset();
-                if self.next_drop_time <= now {
+    pub fn periodic_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
+        while self.next_drop_time <= now {
+            match self.tetromino.try_down(field) {
+                None => {
+                    return self.lock_delay.consume_time(now);
+                }
+                Some(dropped) => {
+                    self.lock_delay.reset();
                     self.next_drop_time += self.drop_period;
                     self.tetromino = dropped;
                 }
-                DropResult::Continue
             }
         }
+        DropResult::Continue
     }
 
     pub fn manual_soft_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
@@ -102,8 +104,8 @@ mod tests {
         let start_time = clock.now();
         let mut b = ControlledBlocks::new(start_time, Shape::I, Duration::from_secs(1));
 
-        b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(10));
+        b.periodic_drop(&mock_field, start_time + Duration::from_millis(10));
 
-        b.maybe_periodic_drop(&mock_field, start_time + Duration::from_millis(1010));
+        b.periodic_drop(&mock_field, start_time + Duration::from_millis(1010));
     }
 }

@@ -81,10 +81,7 @@ impl GameState {
         for trigger in self.keyboard_states.update(keyboard, now) {
             self.handle_input(trigger, now);
         }
-        let drop_result = self
-            .control
-            .as_blocks()?
-            .maybe_periodic_drop(&self.field, now);
+        let drop_result = self.control.as_blocks()?.periodic_drop(&self.field, now);
         self.handle_soft_drop(drop_result, now);
         None
     }
