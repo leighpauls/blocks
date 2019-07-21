@@ -51,6 +51,7 @@ enum GameScreen {
     Playing(Game, GameClock),
     Paused(Game, PausedClock),
     Won,
+    Lost,
     Swap,
 }
 
@@ -102,7 +103,8 @@ impl State for GameWrapper {
             GameScreen::Playing(mut game, clock) => {
                 match game.state.update(window.keyboard(), clock.now()) {
                     GameCondition::Won => GameScreen::Won,
-                    _ => GameScreen::Playing(game, clock),
+                    GameCondition::Lost => GameScreen::Lost,
+                    GameCondition::Playing => GameScreen::Playing(game, clock),
                 }
             }
             other => other,

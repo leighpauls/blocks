@@ -10,6 +10,10 @@ pub struct Tetromino {
 }
 
 impl Tetromino {
+    pub fn try_new(p: Pos, s: Shape, field: &CheckableField) -> Option<Tetromino> {
+        Self::new(p, s).if_valid(field)
+    }
+
     pub fn new(p: Pos, s: Shape) -> Tetromino {
         Tetromino {
             root_pos: p,

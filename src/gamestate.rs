@@ -1,9 +1,10 @@
 use crate::controlled::{ControlledBlocks, DropResult};
 use crate::field::{Field, PlayingFieldRenderBlocksInstructions};
 use crate::keybindings::{KeyboardStates, Trigger};
-use crate::position::Coord;
+use crate::position::{p, Coord, Pos};
 use crate::random_bag::RandomBag;
 use crate::shapes::Shape;
+use crate::tetromino::Tetromino;
 use crate::time::{GameClock, GameTime};
 use quicksilver::input::{ButtonState, Key};
 use std::ops::Index;
@@ -30,11 +31,13 @@ pub struct RenderInfo<'a> {
 pub enum GameCondition {
     Playing,
     Won,
+    Lost,
 }
 
 enum Control {
     Blocks(ControlledBlocks),
     WaitForClear(Vec<Coord>, GameTime),
+    TakeHold(Shape),
 }
 
 impl Control {
@@ -49,19 +52,11 @@ impl Control {
 impl GameState {
     pub fn new() -> (GameState, GameClock) {
         let clock = GameClock::new();
-        let now = clock.now();
-        let mut rb = RandomBag::new();
-        let level = 1;
-
         (
             GameState {
                 field: Field::new(),
-                control: Control::Blocks(ControlledBlocks::new(
-                    now,
-                    rb.take_next(),
-                    level_drop_period(level),
-                )),
-                random_bag: rb,
+                control: Control::WaitForClear(vec![], clock.now()),
+                random_bag: RandomBag::new(),
                 hold_piece: None,
                 can_hold: true,
                 keyboard_states: KeyboardStates::new(),
@@ -75,10 +70,26 @@ impl GameState {
     where
         T: Index<Key, Output = ButtonState>,
     {
+        if let Control::TakeHold(shape) = &mut self.control {
+            let s = *shape;
+            self.control = match self.make_controlled_blocks(now, s) {
+                Some(t) => Control::Blocks(t),
+                None => {
+                    return GameCondition::Lost;
+                }
+            };
+        }
+
         if let Control::WaitForClear(lines, end_time) = &mut self.control {
             if *end_time <= now {
                 self.field.remove_lines(&lines);
-                self.control = Control::Blocks(self.take_next_block(now));
+                let shape = self.random_bag.take_next();
+                self.control = match self.make_controlled_blocks(now, shape) {
+                    Some(t) => Control::Blocks(t),
+                    None => {
+                        return GameCondition::Lost;
+                    }
+                };
             }
         }
 
@@ -114,16 +125,12 @@ impl GameState {
             }
             Trigger::HoldPiece => {
                 if self.can_hold {
-                    let new_piece = match self.hold_piece {
-                        Some(shape) => shape,
-                        None => self.random_bag.take_next(),
+                    let new_hold_shape = blocks.minos().shape();
+                    self.control = match self.hold_piece {
+                        Some(s) => Control::TakeHold(s),
+                        None => Control::WaitForClear(vec![], now),
                     };
-                    self.hold_piece = Some(blocks.minos().shape());
-                    self.control = Control::Blocks(ControlledBlocks::new(
-                        now,
-                        new_piece,
-                        level_drop_period(self.level()),
-                    ));
+                    self.hold_piece = Some(new_hold_shape);
                     self.can_hold = false;
                 }
             }
@@ -139,6 +146,9 @@ impl GameState {
                 }
                 Control::WaitForClear(lines, _) => {
                     PlayingFieldRenderBlocksInstructions::new_clearing(&self.field, lines.clone())
+                }
+                Control::TakeHold(_) => {
+                    PlayingFieldRenderBlocksInstructions::new_clearing(&self.field, vec![])
                 }
             },
             previews: self.random_bag.previews(),
@@ -164,7 +174,7 @@ impl GameState {
         let lines = self.field.find_lines();
         if lines.is_empty() {
             // Replace the stopped blocks with new ones
-            self.control = Control::Blocks(self.take_next_block(now));
+            self.control = Control::WaitForClear(vec![], now);
         } else {
             self.cleared_lines += lines.len() as i32;
             self.control = Control::WaitForClear(lines, now + Duration::from_millis(500));
@@ -177,13 +187,18 @@ impl GameState {
         self.cleared_lines / LINES_PER_LEVEL + 1
     }
 
-    fn take_next_block(&mut self, now: GameTime) -> ControlledBlocks {
-        ControlledBlocks::new(
+    fn make_controlled_blocks(&mut self, now: GameTime, shape: Shape) -> Option<ControlledBlocks> {
+        let new_tetromino = Tetromino::try_new(start_pos(), shape, &self.field)?;
+        Some(ControlledBlocks::new(
             now,
-            self.random_bag.take_next(),
+            new_tetromino,
             level_drop_period(self.level()),
-        )
+        ))
     }
+}
+
+fn start_pos() -> Pos {
+    p(3, Field::PLAYING_BOUNDARY_HEIGHT - 2)
 }
 
 fn level_drop_period(level: i32) -> Duration {

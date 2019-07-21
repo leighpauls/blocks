@@ -1,7 +1,7 @@
-use crate::field::{CheckableField, Field};
+use crate::field::CheckableField;
 use crate::lockdelay::LockDelay;
-use crate::position::{p, Pos, RotateDir, ShiftDir};
-use crate::shapes::{MinoSet, Shape};
+use crate::position::{RotateDir, ShiftDir};
+use crate::shapes::MinoSet;
 use crate::tetromino::Tetromino;
 use crate::time::GameTime;
 use std::time::Duration;
@@ -13,10 +13,6 @@ pub struct ControlledBlocks {
     lock_delay: LockDelay,
 }
 
-fn start_pos() -> Pos {
-    p(3, Field::PLAYING_BOUNDARY_HEIGHT - 2)
-}
-
 #[derive(PartialEq, Debug)]
 pub enum DropResult {
     Continue,
@@ -24,9 +20,13 @@ pub enum DropResult {
 }
 
 impl ControlledBlocks {
-    pub fn new(start_time: GameTime, shape: Shape, drop_period: Duration) -> ControlledBlocks {
+    pub fn new(
+        start_time: GameTime,
+        tetromino: Tetromino,
+        drop_period: Duration,
+    ) -> ControlledBlocks {
         ControlledBlocks {
-            tetromino: Tetromino::new(start_pos(), shape),
+            tetromino: tetromino,
             next_drop_time: start_time + drop_period,
             drop_period: drop_period,
             lock_delay: LockDelay::new(),
@@ -88,6 +88,8 @@ impl ControlledBlocks {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::position::{p, Pos};
+    use crate::shapes::Shape;
     use crate::time::GameClock;
 
     mock_trait!(MockCheckableField, is_open(Pos) -> bool);
@@ -102,7 +104,11 @@ mod tests {
 
         let clock = GameClock::new();
         let start_time = clock.now();
-        let mut b = ControlledBlocks::new(start_time, Shape::I, Duration::from_secs(1));
+        let mut b = ControlledBlocks::new(
+            start_time,
+            Tetromino::new(p(0, 0), Shape::I),
+            Duration::from_secs(1),
+        );
 
         b.periodic_drop(&mock_field, start_time + Duration::from_millis(10));
 
