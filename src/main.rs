@@ -46,20 +46,20 @@ pub struct Game {
 
 type FontFuture = Box<Future<Item = Font, Error = Error>>;
 
-enum LoadingGame {
-    InProgress(FontFuture),
-    Loaded(Game, GameClock),
+enum GameScreen {
+    Loading(FontFuture),
+    Playing(Game, GameClock),
     Paused(Game, PausedClock),
     Swap,
 }
 
-impl LoadingGame {
+impl GameScreen {
     fn evolve(&mut self, window: &Window) {
-        *self = match std::mem::replace(self, LoadingGame::Swap) {
-            LoadingGame::InProgress(mut font_future) => match font_future.poll() {
+        *self = match std::mem::replace(self, GameScreen::Swap) {
+            GameScreen::Loading(mut font_future) => match font_future.poll() {
                 Ok(Async::Ready(font)) => {
                     let (game_state, clock) = GameState::new();
-                    LoadingGame::Loaded(
+                    GameScreen::Playing(
                         Game {
                             state: game_state,
                             screen_size: window.screen_size(),
@@ -68,7 +68,7 @@ impl LoadingGame {
                         clock,
                     )
                 }
-                _ => LoadingGame::InProgress(font_future),
+                _ => GameScreen::Loading(font_future),
             },
             other => other,
         };
@@ -77,19 +77,19 @@ impl LoadingGame {
 
 struct GameWrapper {
     // Initialzied on the first loop
-    loading_game: LoadingGame,
+    loading_game: GameScreen,
 }
 
 impl State for GameWrapper {
     fn new() -> Result<GameWrapper> {
         Ok(GameWrapper {
-            loading_game: LoadingGame::InProgress(Box::new(Font::load("Roboto-Medium.ttf"))),
+            loading_game: GameScreen::Loading(Box::new(Font::load("Roboto-Medium.ttf"))),
         })
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         match &self.loading_game {
-            LoadingGame::Loaded(g, _) => draw_field(window, g),
+            GameScreen::Playing(g, _) | GameScreen::Paused(g, _) => draw_field(window, g),
             _ => Ok(()),
         }
     }
@@ -97,7 +97,7 @@ impl State for GameWrapper {
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.loading_game.evolve(window);
 
-        if let LoadingGame::Loaded(ref mut game, ref clock) = self.loading_game {
+        if let GameScreen::Playing(ref mut game, ref clock) = self.loading_game {
             game.state.update(window.keyboard(), clock.now());
         }
 
@@ -108,9 +108,9 @@ impl State for GameWrapper {
         match event {
             Event::Key(Key::Escape, ButtonState::Pressed) => {
                 self.loading_game =
-                    match std::mem::replace(&mut self.loading_game, LoadingGame::Swap) {
-                        LoadingGame::Loaded(g, c) => LoadingGame::Paused(g, c.pause()),
-                        LoadingGame::Paused(g, c) => LoadingGame::Loaded(g, c.resume()),
+                    match std::mem::replace(&mut self.loading_game, GameScreen::Swap) {
+                        GameScreen::Playing(g, c) => GameScreen::Paused(g, c.pause()),
+                        GameScreen::Paused(g, c) => GameScreen::Playing(g, c.resume()),
                         other => other,
                     };
             }
