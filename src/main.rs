@@ -27,7 +27,7 @@ mod tetromino;
 mod time;
 
 use futures::Async;
-use gamestate::GameState;
+use gamestate::{GameCondition, GameState};
 use quicksilver::{
     geom::Vector,
     graphics::Font,
@@ -50,6 +50,7 @@ enum GameScreen {
     Loading(FontFuture),
     Playing(Game, GameClock),
     Paused(Game, PausedClock),
+    Won,
     Swap,
 }
 
@@ -97,9 +98,15 @@ impl State for GameWrapper {
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.loading_game.evolve(window);
 
-        if let GameScreen::Playing(ref mut game, ref clock) = self.loading_game {
-            game.state.update(window.keyboard(), clock.now());
-        }
+        self.loading_game = match std::mem::replace(&mut self.loading_game, GameScreen::Swap) {
+            GameScreen::Playing(mut game, clock) => {
+                match game.state.update(window.keyboard(), clock.now()) {
+                    GameCondition::Won => GameScreen::Won,
+                    _ => GameScreen::Playing(game, clock),
+                }
+            }
+            other => other,
+        };
 
         Ok(())
     }

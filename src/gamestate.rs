@@ -27,6 +27,11 @@ pub struct RenderInfo<'a> {
     pub level: i32,
 }
 
+pub enum GameCondition {
+    Playing,
+    Won,
+}
+
 enum Control {
     Blocks(ControlledBlocks),
     WaitForClear(Vec<Coord>, GameTime),
@@ -66,7 +71,7 @@ impl GameState {
         )
     }
 
-    pub fn update<T>(&mut self, keyboard: &T, now: GameTime) -> Option<()>
+    pub fn update<T>(&mut self, keyboard: &T, now: GameTime) -> GameCondition
     where
         T: Index<Key, Output = ButtonState>,
     {
@@ -80,9 +85,18 @@ impl GameState {
         for trigger in self.keyboard_states.update(keyboard, now) {
             self.handle_input(trigger, now);
         }
-        let drop_result = self.control.as_blocks()?.periodic_drop(&self.field, now);
-        self.handle_soft_drop(drop_result, now);
-        None
+
+        if let Some(b) = self.control.as_blocks() {
+            let drop = b.periodic_drop(&self.field, now);
+            self.handle_soft_drop(drop, now);
+        }
+
+        const MAX_LEVEL: i32 = 15;
+        if self.level() > MAX_LEVEL {
+            GameCondition::Won
+        } else {
+            GameCondition::Playing
+        }
     }
 
     fn handle_input(&mut self, trigger: Trigger, now: GameTime) -> Option<()> {
