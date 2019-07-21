@@ -10,6 +10,11 @@ pub struct GameClock {
     start_time: Instant,
 }
 
+pub struct PausedClock {
+    orig_start_time: Instant,
+    pause_time: Instant,
+}
+
 impl GameClock {
     pub fn new() -> GameClock {
         GameClock {
@@ -17,10 +22,25 @@ impl GameClock {
         }
     }
 
+    pub fn pause(self) -> PausedClock {
+        PausedClock {
+            orig_start_time: self.start_time,
+            pause_time: Instant::now(),
+        }
+    }
+
     pub fn now(&self) -> GameTime {
         return GameTime {
             since_start: Instant::now() - self.start_time,
         };
+    }
+}
+
+impl PausedClock {
+    pub fn resume(self) -> GameClock {
+        GameClock {
+            start_time: self.orig_start_time + (Instant::now() - self.pause_time),
+        }
     }
 }
 

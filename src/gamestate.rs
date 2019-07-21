@@ -12,7 +12,6 @@ use std::time::Duration;
 pub struct GameState {
     field: Field,
     control: Control,
-    clock: GameClock,
     random_bag: RandomBag,
     hold_piece: Option<Shape>,
     can_hold: bool,
@@ -43,34 +42,34 @@ impl Control {
 }
 
 impl GameState {
-    pub fn new() -> GameState {
+    pub fn new() -> (GameState, GameClock) {
         let clock = GameClock::new();
         let now = clock.now();
         let mut rb = RandomBag::new();
         let level = 1;
 
-        GameState {
-            field: Field::new(),
-            control: Control::Blocks(ControlledBlocks::new(
-                now,
-                rb.take_next(),
-                level_drop_period(level),
-            )),
-            clock: clock,
-            random_bag: rb,
-            hold_piece: None,
-            can_hold: true,
-            keyboard_states: KeyboardStates::new(),
-            cleared_lines: 0,
-        }
+        (
+            GameState {
+                field: Field::new(),
+                control: Control::Blocks(ControlledBlocks::new(
+                    now,
+                    rb.take_next(),
+                    level_drop_period(level),
+                )),
+                random_bag: rb,
+                hold_piece: None,
+                can_hold: true,
+                keyboard_states: KeyboardStates::new(),
+                cleared_lines: 0,
+            },
+            clock,
+        )
     }
 
-    pub fn update<T>(&mut self, keyboard: &T) -> Option<()>
+    pub fn update<T>(&mut self, keyboard: &T, now: GameTime) -> Option<()>
     where
         T: Index<Key, Output = ButtonState>,
     {
-        let now = self.clock.now();
-
         if let Control::WaitForClear(lines, end_time) = &mut self.control {
             if *end_time <= now {
                 self.field.remove_lines(&lines);
