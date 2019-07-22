@@ -34,6 +34,8 @@ pub enum GameCondition {
     Lost,
 }
 
+const MAX_LEVEL: i32 = 15;
+
 enum Control {
     Blocks(ControlledBlocks),
     WaitForClear(Vec<Coord>, GameTime),
@@ -80,9 +82,16 @@ impl GameState {
             };
         }
 
+        let level = self.level();
         if let Control::WaitForClear(lines, end_time) = &mut self.control {
             if *end_time <= now {
                 self.field.remove_lines(&lines);
+
+                if level > MAX_LEVEL {
+                    self.control = Control::WaitForClear(vec![], *end_time);
+                    return GameCondition::Won;
+                }
+
                 let shape = self.random_bag.take_next();
                 self.control = match self.make_controlled_blocks(now, shape) {
                     Some(t) => Control::Blocks(t),
@@ -102,12 +111,7 @@ impl GameState {
             self.handle_soft_drop(drop, now);
         }
 
-        const MAX_LEVEL: i32 = 15;
-        if self.level() > MAX_LEVEL {
-            GameCondition::Won
-        } else {
-            GameCondition::Playing
-        }
+        GameCondition::Playing
     }
 
     fn handle_input(&mut self, trigger: Trigger, now: GameTime) -> Option<()> {

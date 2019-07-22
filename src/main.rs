@@ -50,8 +50,8 @@ enum GameScreen {
     Loading(FontFuture),
     Playing(Game, GameClock),
     Paused(Game, PausedClock),
-    Won,
-    Lost,
+    Won(Game),
+    Lost(Game),
     Swap,
 }
 
@@ -91,7 +91,10 @@ impl State for GameWrapper {
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         match &self.loading_game {
-            GameScreen::Playing(g, _) | GameScreen::Paused(g, _) => draw_field(window, g),
+            GameScreen::Playing(g, _)
+            | GameScreen::Paused(g, _)
+            | GameScreen::Won(g)
+            | GameScreen::Lost(g) => draw_field(window, g),
             _ => Ok(()),
         }
     }
@@ -102,8 +105,8 @@ impl State for GameWrapper {
         self.loading_game = match std::mem::replace(&mut self.loading_game, GameScreen::Swap) {
             GameScreen::Playing(mut game, clock) => {
                 match game.state.update(window.keyboard(), clock.now()) {
-                    GameCondition::Won => GameScreen::Won,
-                    GameCondition::Lost => GameScreen::Lost,
+                    GameCondition::Won => GameScreen::Won(game),
+                    GameCondition::Lost => GameScreen::Lost(game),
                     GameCondition::Playing => GameScreen::Playing(game, clock),
                 }
             }
