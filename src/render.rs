@@ -5,9 +5,8 @@ use crate::Game;
 
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
-    graphics::{Color, FontStyle},
+    graphics::{Background, Color, FontStyle, Image},
     lifecycle::Window,
-    prelude::Background::Img,
     Result,
 };
 
@@ -19,8 +18,22 @@ pub enum DrawBlockType {
     ClearingLine,
 }
 
+pub struct Images {
+    pub empty_mino: Image,
+}
+
+impl Images {
+    fn for_mino(&self, b: &DrawBlockType) -> Background {
+        if let DrawBlockType::Empty = b {
+            Background::Img(&self.empty_mino)
+        } else {
+            Background::Col(b.color())
+        }
+    }
+}
+
 impl DrawBlockType {
-    pub fn color(&self) -> Color {
+    fn color(&self) -> Color {
         match self {
             DrawBlockType::Empty => Color::BLACK,
             DrawBlockType::OutOfPlay => Color::WHITE,
@@ -60,6 +73,7 @@ fn render_blocks<T, I>(
     instructions: &T,
     scale_transform: Transform,
     position_transform: Transform,
+    images: &Images,
     window: &mut Window,
 ) where
     I: Iterator<Item = RenderBlockInfo>,
@@ -75,7 +89,7 @@ fn render_blocks<T, I>(
                     ),
                 scale_transform * Vector::new(1, 1),
             ),
-            block.block_type.color(),
+            images.for_mino(&block.block_type),
             Transform::IDENTITY,
             0,
         );
@@ -103,6 +117,7 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
         &render_info.playing_field,
         scale_transform,
         position_transform,
+        &game.images,
         window,
     );
 
@@ -115,6 +130,7 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
             &*shape,
             preview_scale_transform,
             preview_root_position * Transform::translate((0, 3 * i as i32)),
+            &game.images,
             window,
         );
     }
@@ -127,6 +143,7 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
             &hold_piece,
             preview_scale_transform,
             hold_piece_position,
+            &game.images,
             window,
         );
     }
@@ -144,7 +161,7 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
         &score_image
             .area()
             .translate((screen_size.x * 0.7, screen_size.y * 0.7)),
-        Img(&score_image),
+        Background::Img(&score_image),
     );
 
     Ok(())
