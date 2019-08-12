@@ -10,6 +10,8 @@ use quicksilver::{
     Result,
 };
 
+use crate::resources::Images;
+
 pub enum DrawBlockType {
     Empty,
     Occupied(Shape),
@@ -18,39 +20,28 @@ pub enum DrawBlockType {
     ClearingLine,
 }
 
-pub struct Images {
-    pub empty_mino: Image,
-}
-
-impl Images {
-    fn for_mino(&self, b: &DrawBlockType) -> Background {
-        if let DrawBlockType::Empty = b {
-            Background::Img(&self.empty_mino)
-        } else {
-            Background::Col(b.color())
-        }
+fn image_for_mino<'a>(images: &'a Images, b: &DrawBlockType) -> Background<'a> {
+    match b {
+        DrawBlockType::Empty => Background::Img(&images.empty_mino),
+        DrawBlockType::Occupied(shape) => Background::Img(image_for_shape(images, *shape)),
+        DrawBlockType::GhostPiece(shape) => Background::Blended(
+            image_for_shape(images, *shape),
+            Color::from_rgba(0x90, 0x90, 0x90, 1.0),
+        ),
+        DrawBlockType::OutOfPlay => Background::Col(Color::WHITE),
+        DrawBlockType::ClearingLine => Background::Col(Color::from_rgba(0x80, 0x80, 0x80, 1.0)),
     }
 }
 
-impl DrawBlockType {
-    fn color(&self) -> Color {
-        match self {
-            DrawBlockType::Empty => Color::BLACK,
-            DrawBlockType::OutOfPlay => Color::WHITE,
-            DrawBlockType::GhostPiece(shape) => DrawBlockType::Occupied(*shape)
-                .color()
-                .multiply(Color::from_rgba(0x80, 0x80, 0x80, 1.0)),
-            DrawBlockType::Occupied(shape) => match *shape {
-                Shape::I => Color::CYAN,
-                Shape::O => Color::YELLOW,
-                Shape::T => Color::PURPLE,
-                Shape::S => Color::GREEN,
-                Shape::Z => Color::RED,
-                Shape::J => Color::BLUE,
-                Shape::L => Color::ORANGE,
-            },
-            DrawBlockType::ClearingLine => Color::from_rgba(0x80, 0x80, 0x80, 1.0),
-        }
+fn image_for_shape<'a>(images: &'a Images, shape: Shape) -> &'a Image {
+    match shape {
+        Shape::I => &images.i_mino,
+        Shape::O => &images.o_mino,
+        Shape::T => &images.t_mino,
+        Shape::S => &images.s_mino,
+        Shape::Z => &images.z_mino,
+        Shape::J => &images.j_mino,
+        Shape::L => &images.l_mino,
     }
 }
 
@@ -89,7 +80,7 @@ fn render_blocks<T, I>(
                     ),
                 scale_transform * Vector::new(1, 1),
             ),
-            images.for_mino(&block.block_type),
+            image_for_mino(images, &block.block_type),
             Transform::IDENTITY,
             0,
         );
@@ -117,7 +108,7 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
         &render_info.playing_field,
         scale_transform,
         position_transform,
-        &game.images,
+        &game.resources.images,
         window,
     );
 
@@ -130,7 +121,7 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
             &*shape,
             preview_scale_transform,
             preview_root_position * Transform::translate((0, 3 * i as i32)),
-            &game.images,
+            &game.resources.images,
             window,
         );
     }
@@ -143,19 +134,20 @@ pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
             &hold_piece,
             preview_scale_transform,
             hold_piece_position,
-            &game.images,
+            &game.resources.images,
             window,
         );
     }
 
     let style = FontStyle::new(24.0, Color::BLACK);
-    let score_image = game.score_font.render(
+    let score_image = game.resources.font.render(
         &format!(
             "Lines: {}\nLevel: {}",
             render_info.cleared_lines, render_info.level
         ),
         &style,
     )?;
+
     use quicksilver::geom::Shape;
     window.draw(
         &score_image

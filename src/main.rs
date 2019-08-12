@@ -22,6 +22,7 @@ mod lockdelay;
 mod position;
 mod random_bag;
 mod render;
+mod resources;
 mod shapes;
 mod tetromino;
 mod time;
@@ -30,26 +31,22 @@ use futures::Async;
 use gamestate::{GameCondition, GameState};
 use quicksilver::{
     geom::Vector,
-    graphics::{Font, Image},
     input::{ButtonState, Key},
     lifecycle::{run, Event, Settings, State, Window},
-    Error, Future, Result,
+    Result,
 };
-use render::{draw_field, Images};
+use render::draw_field;
+use resources::{ResourceFuture, Resources};
 use time::{GameClock, PausedClock};
 
 pub struct Game {
     pub state: GameState,
     pub screen_size: Vector,
-    pub score_font: Font,
-    pub images: Images,
+    pub resources: Resources,
 }
 
-type FontFuture = Box<Future<Item = Font, Error = Error>>;
-type ImageFuture = Box<Future<Item = Image, Error = Error>>;
-
 enum GameScreen {
-    Loading(FontFuture, ImageFuture),
+    Loading(Box<ResourceFuture>),
     Playing(Game, GameClock),
     Paused(Game, PausedClock),
     Won(Game),
@@ -60,25 +57,20 @@ enum GameScreen {
 impl GameScreen {
     fn evolve(&mut self, window: &Window) {
         *self = match std::mem::replace(self, GameScreen::Swap) {
-            GameScreen::Loading(mut font_future, mut empty_future) => {
-                match (font_future.poll(), empty_future.poll()) {
-                    (Ok(Async::Ready(font)), Ok(Async::Ready(empty_mino))) => {
-                        let (game_state, clock) = GameState::new();
-                        GameScreen::Playing(
-                            Game {
-                                state: game_state,
-                                screen_size: window.screen_size(),
-                                score_font: font,
-                                images: Images {
-                                    empty_mino: empty_mino,
-                                },
-                            },
-                            clock,
-                        )
-                    }
-                    _ => GameScreen::Loading(font_future, empty_future),
+            GameScreen::Loading(mut resource_future) => match resource_future.poll() {
+                Ok(Async::Ready(resources)) => {
+                    let (game_state, clock) = GameState::new();
+                    GameScreen::Playing(
+                        Game {
+                            state: game_state,
+                            screen_size: window.screen_size(),
+                            resources: resources,
+                        },
+                        clock,
+                    )
                 }
-            }
+                _ => GameScreen::Loading(resource_future),
+            },
             other => other,
         };
     }
@@ -92,10 +84,7 @@ struct GameWrapper {
 impl State for GameWrapper {
     fn new() -> Result<GameWrapper> {
         Ok(GameWrapper {
-            loading_game: GameScreen::Loading(
-                Box::new(Font::load("Roboto-Medium.ttf")),
-                Box::new(Image::load("empty_mino.png")),
-            ),
+            loading_game: GameScreen::Loading(Box::new(resources::load_resources())),
         })
     }
 
