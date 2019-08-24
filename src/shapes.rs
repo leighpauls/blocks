@@ -45,7 +45,7 @@ impl MinoSet {
         }
     }
 
-    pub fn is_valid(&self, field: &CheckableField) -> bool {
+    pub fn is_valid(&self, field: &dyn CheckableField) -> bool {
         for mino in self.minos.iter() {
             if !field.is_open(*mino) {
                 return false;

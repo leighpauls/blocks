@@ -21,7 +21,7 @@ pub struct KeyboardStates {
 struct Binding {
     key: Key,
     trigger: Trigger,
-    state: Box<KeyStateMachine>,
+    state: Box<dyn KeyStateMachine>,
 }
 
 impl KeyboardStates {
@@ -78,7 +78,7 @@ fn bind_single(key: Key, trigger: Trigger) -> Binding {
     bind(key, trigger, Box::new(SingleKeyStateMachine::new()))
 }
 
-fn bind(key: Key, trigger: Trigger, ksm: Box<KeyStateMachine>) -> Binding {
+fn bind(key: Key, trigger: Trigger, ksm: Box<dyn KeyStateMachine>) -> Binding {
     Binding {
         key: key,
         trigger: trigger,

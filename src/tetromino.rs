@@ -10,7 +10,7 @@ pub struct Tetromino {
 }
 
 impl Tetromino {
-    pub fn try_new(p: Pos, s: Shape, field: &CheckableField) -> Option<Tetromino> {
+    pub fn try_new(p: Pos, s: Shape, field: &dyn CheckableField) -> Option<Tetromino> {
         Self::new(p, s).if_valid(field)
     }
 
@@ -26,7 +26,7 @@ impl Tetromino {
         self.shape.to_minos(self.rotation, self.root_pos)
     }
 
-    pub fn hard_drop(&self, field: &CheckableField) -> Tetromino {
+    pub fn hard_drop(&self, field: &dyn CheckableField) -> Tetromino {
         let mut result = *self;
         loop {
             if let Some(new) = result.try_down(field) {
@@ -37,7 +37,7 @@ impl Tetromino {
         }
     }
 
-    pub fn try_down(&self, field: &CheckableField) -> Option<Tetromino> {
+    pub fn try_down(&self, field: &dyn CheckableField) -> Option<Tetromino> {
         Tetromino {
             root_pos: self.root_pos + p(0, -1),
             ..*self
@@ -45,7 +45,7 @@ impl Tetromino {
         .if_valid(field)
     }
 
-    pub fn try_shift(&self, dir: ShiftDir, field: &CheckableField) -> Option<Tetromino> {
+    pub fn try_shift(&self, dir: ShiftDir, field: &dyn CheckableField) -> Option<Tetromino> {
         Tetromino {
             root_pos: self.root_pos + dir,
             ..*self
@@ -53,7 +53,7 @@ impl Tetromino {
         .if_valid(field)
     }
 
-    pub fn try_rotate(&self, dir: RotateDir, field: &CheckableField) -> Option<Tetromino> {
+    pub fn try_rotate(&self, dir: RotateDir, field: &dyn CheckableField) -> Option<Tetromino> {
         let new_rotation = self.rotation + dir;
 
         'kick: for kick_offset in self.shape.wall_kick_offsets(self.rotation, dir).into_iter() {
@@ -71,7 +71,7 @@ impl Tetromino {
         None
     }
 
-    fn if_valid(self, field: &CheckableField) -> Option<Self> {
+    fn if_valid(self, field: &dyn CheckableField) -> Option<Self> {
         if self.to_minos().is_valid(field) {
             Some(self)
         } else {

@@ -37,19 +37,19 @@ impl ControlledBlocks {
         self.tetromino.to_minos()
     }
 
-    pub fn shift(&mut self, field: &CheckableField, dir: ShiftDir) {
+    pub fn shift(&mut self, field: &dyn CheckableField, dir: ShiftDir) {
         self.manual_movement(self.tetromino.try_shift(dir, field));
     }
 
-    pub fn rotate(&mut self, field: &CheckableField, dir: RotateDir) {
+    pub fn rotate(&mut self, field: &dyn CheckableField, dir: RotateDir) {
         self.manual_movement(self.tetromino.try_rotate(dir, field));
     }
 
-    pub fn hard_drop(&mut self, field: &CheckableField) {
+    pub fn hard_drop(&mut self, field: &dyn CheckableField) {
         self.tetromino = self.tetromino.hard_drop(field);
     }
 
-    pub fn periodic_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
+    pub fn periodic_drop(&mut self, field: &dyn CheckableField, now: GameTime) -> DropResult {
         while self.next_drop_time <= now {
             match self.tetromino.try_down(field) {
                 None => {
@@ -65,7 +65,7 @@ impl ControlledBlocks {
         DropResult::Continue
     }
 
-    pub fn manual_soft_drop(&mut self, field: &CheckableField, now: GameTime) -> DropResult {
+    pub fn manual_soft_drop(&mut self, field: &dyn CheckableField, now: GameTime) -> DropResult {
         match self.tetromino.try_down(field) {
             None => self.lock_delay.consume_time(now),
             Some(dropped) => {

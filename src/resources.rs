@@ -19,7 +19,7 @@ pub struct Resources {
     pub images: Images,
 }
 
-pub type ResourceFuture = Future<Item = Resources, Error = Error>;
+pub type ResourceFuture = dyn Future<Item = Resources, Error = Error>;
 
 pub fn load_resources() -> impl Future<Item = Resources, Error = Error> {
     Font::load("Roboto-Medium.ttf")
