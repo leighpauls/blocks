@@ -12,6 +12,10 @@ use quicksilver::{
 
 use crate::resources::Images;
 
+fn bg_color() -> Color {
+    Color::from_rgba(0x33, 0x33, 0x33, 1.0)
+}
+
 pub enum DrawBlockType {
     Empty,
     Occupied(Shape),
@@ -28,7 +32,7 @@ fn image_for_mino<'a>(images: &'a Images, b: &DrawBlockType) -> Background<'a> {
             image_for_shape(images, *shape),
             Color::from_rgba(0x90, 0x90, 0x90, 1.0),
         ),
-        DrawBlockType::OutOfPlay => Background::Col(Color::WHITE),
+        DrawBlockType::OutOfPlay => Background::Col(bg_color()),
         DrawBlockType::ClearingLine => Background::Col(Color::from_rgba(0x80, 0x80, 0x80, 1.0)),
     }
 }
@@ -90,7 +94,7 @@ fn render_blocks<T, I>(
 const BLOCK_SIZE_RATIO: f32 = 0.04;
 
 pub fn draw_field(window: &mut Window, game: &Game) -> Result<()> {
-    window.clear(Color::WHITE)?;
+    window.clear(bg_color())?;
 
     let screen_size = &game.screen_size;
     let full_height = screen_size.y;
