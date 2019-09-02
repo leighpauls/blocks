@@ -8,9 +8,9 @@ edition = "2018"
 quicksilver = "0.3.15"
 num-derive = "0.2.5"
 num-traits = "0.2.8"
-rand = "0.7.0"
 futures = "0.1.27"
-instant = { version = "0.1.1", features = ["stdweb"] }
+getrandom = { version ="*", features = ["stdweb"] }
+instant = { version ="*", features = ["stdweb"] }
 
 [dev-dependencies]
 double = "0.2.3"

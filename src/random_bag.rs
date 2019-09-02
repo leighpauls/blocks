@@ -1,5 +1,5 @@
 use crate::shapes::Shape;
-use rand::random;
+use getrandom;
 use std::collections::VecDeque;
 
 pub struct RandomBag {
@@ -45,9 +45,11 @@ impl RandomBag {
     }
 
     fn fill_upcoming(&mut self) {
+        let mut rand_byte: [u8; 1] = [0];
+        getrandom::getrandom(&mut rand_byte).unwrap();
         self.upcoming.push_back(
             self.remaining
-                .remove(random::<usize>() % self.remaining.len()),
+                .remove((rand_byte[0] as usize) % self.remaining.len()),
         );
         if self.remaining.is_empty() {
             self.remaining = ALL_SHAPES.to_vec();

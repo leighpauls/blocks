@@ -10,8 +10,8 @@ extern crate quicksilver;
 #[macro_use]
 extern crate num_derive;
 extern crate futures;
+extern crate getrandom;
 extern crate num_traits;
-extern crate rand;
 
 mod controlled;
 mod field;
