@@ -1,5 +1,5 @@
+use core::ops::Add;
 use num_traits::FromPrimitive;
-use std::ops::Add;
 
 pub type Coord = i32;
 

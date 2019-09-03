@@ -1,6 +1,6 @@
 use crate::controlled::DropResult;
 use crate::time::GameTime;
-use std::time::Duration;
+use core::time::Duration;
 
 pub struct LockDelay {
     accumulated_time: Duration,

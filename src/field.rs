@@ -2,6 +2,7 @@ use crate::position::{p, Coord, Pos};
 use crate::render::{BlockRenderInstructions, DrawBlockType, RenderBlockInfo};
 use crate::shapes::{MinoSet, Shape};
 use crate::tetromino::Tetromino;
+use alloc::vec::Vec;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum FieldBlock {

@@ -1,6 +1,6 @@
+use core::ops::{Add, AddAssign, Sub};
+use core::time::Duration;
 use instant::Instant;
-use std::ops::{Add, AddAssign, Sub};
-use std::time::Duration;
 
 #[derive(Copy, Clone, Ord, PartialOrd, PartialEq, Eq, Debug)]
 pub struct GameTime {

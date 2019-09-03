@@ -1,6 +1,7 @@
 use crate::shapes::Shape;
+use alloc::collections::vec_deque::VecDeque;
+use alloc::vec::Vec;
 use getrandom;
-use std::collections::VecDeque;
 
 pub struct RandomBag {
     remaining: Vec<Shape>,

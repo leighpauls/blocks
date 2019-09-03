@@ -1,3 +1,5 @@
+#![no_std]
+
 #[cfg(test)]
 #[macro_use]
 extern crate double;
@@ -12,6 +14,8 @@ extern crate num_derive;
 extern crate futures;
 extern crate getrandom;
 extern crate num_traits;
+#[macro_use]
+extern crate alloc;
 
 mod controlled;
 mod field;
@@ -27,6 +31,7 @@ mod shapes;
 mod tetromino;
 mod time;
 
+use alloc::boxed::Box;
 use futures::Async;
 use gamestate::{GameCondition, GameState};
 use quicksilver::{
@@ -56,7 +61,7 @@ enum GameScreen {
 
 impl GameScreen {
     fn evolve(&mut self, window: &Window) {
-        *self = match std::mem::replace(self, GameScreen::Swap) {
+        *self = match core::mem::replace(self, GameScreen::Swap) {
             GameScreen::Loading(mut resource_future) => match resource_future.poll() {
                 Ok(Async::Ready(resources)) => {
                     let (game_state, clock) = GameState::new();
@@ -101,7 +106,7 @@ impl State for GameWrapper {
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.loading_game.evolve(window);
 
-        self.loading_game = match std::mem::replace(&mut self.loading_game, GameScreen::Swap) {
+        self.loading_game = match core::mem::replace(&mut self.loading_game, GameScreen::Swap) {
             GameScreen::Playing(mut game, clock) => {
                 match game.state.update(window.keyboard(), clock.now()) {
                     GameCondition::Won => GameScreen::Won(game),
@@ -119,7 +124,7 @@ impl State for GameWrapper {
         match event {
             Event::Key(Key::Escape, ButtonState::Pressed) => {
                 self.loading_game =
-                    match std::mem::replace(&mut self.loading_game, GameScreen::Swap) {
+                    match core::mem::replace(&mut self.loading_game, GameScreen::Swap) {
                         GameScreen::Playing(g, c) => GameScreen::Paused(g, c.pause()),
                         GameScreen::Paused(g, c) => GameScreen::Playing(g, c.resume()),
                         other => other,

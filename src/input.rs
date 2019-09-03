@@ -1,5 +1,5 @@
 use crate::time::GameTime;
-use std::time::Duration;
+use core::time::Duration;
 
 #[derive(PartialEq, Debug)]
 pub enum InputEvent {

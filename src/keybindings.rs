@@ -1,9 +1,11 @@
 use crate::input::{InputEvent, KeyStateMachine, RepeatingKeyStateMachine, SingleKeyStateMachine};
 use crate::position::{RotateDir, ShiftDir};
 use crate::time::GameTime;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::ops::Index;
+use core::time::Duration;
 use quicksilver::input::{ButtonState, Key};
-use std::ops::Index;
-use std::time::Duration;
 
 #[derive(Copy, Clone)]
 pub enum Trigger {

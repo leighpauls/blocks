@@ -4,7 +4,7 @@ use crate::position::{RotateDir, ShiftDir};
 use crate::shapes::MinoSet;
 use crate::tetromino::Tetromino;
 use crate::time::GameTime;
-use std::time::Duration;
+use core::time::Duration;
 
 pub struct ControlledBlocks {
     pub tetromino: Tetromino,

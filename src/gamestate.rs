@@ -6,9 +6,10 @@ use crate::random_bag::RandomBag;
 use crate::shapes::Shape;
 use crate::tetromino::Tetromino;
 use crate::time::{GameClock, GameTime};
+use alloc::vec::Vec;
+use core::ops::Index;
+use core::time::Duration;
 use quicksilver::input::{ButtonState, Key};
-use std::ops::Index;
-use std::time::Duration;
 
 pub struct GameState {
     field: Field,

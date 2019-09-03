@@ -2,6 +2,7 @@ use crate::field::{CheckableField, Field};
 use crate::position::Coord;
 use crate::position::{p, Pos, RotateDir, Rotations};
 use crate::render::{BlockRenderInstructions, DrawBlockType, RenderBlockInfo};
+use alloc::vec::Vec;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Shape {
